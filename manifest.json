@@ -14,7 +14,12 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Tabboard: switch new tabs between Tabboard and Chrome (Alt+Shift+T)"
+    "default_title": "Tabboard: switch new tabs between Tabboard and Chrome (Alt+Shift+T)",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
   },
   "commands": {
     "_execute_action": {
@@ -27,5 +32,11 @@
   "permissions": [
     "activeTab",
     "storage"
-  ]
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
 }
