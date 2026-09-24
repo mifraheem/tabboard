@@ -1105,44 +1105,79 @@ function rangeOf() {
 // repo -> board title, learned from the tasks themselves
 const boardOfRepo = (repo) => data.projects.find((p) => p.tasks.some((t) => t.repo === repo))?.title;
 
-function standupText() {
+// one model, three renderings: plain text, rich HTML for pasting (Teams, Slack, email) and the styled preview
+function standupModel() {
   const me = data.login, r = rangeOf();
   const listPRs = su.prs ?? su.range === 'standup';
   const inRange = data.recent.filter((x) => { const d = new Date(x.closedAt); return d >= r.a && d < r.b; });
   const issues = inRange.filter((x) => x.kind !== 'PullRequest'), prs = inRange.filter((x) => x.kind === 'PullRequest');
-  const mine = data.projects.flatMap((p) => p.tasks).filter((t) => t.assignees.includes(me) && t.state !== 'CLOSED');
-  const line = (t) => `- #${t.number} ${t.title}`;
-  const grouped = (xs, withRepo) => {
+  const mine = data.projects.flatMap((p) => p.tasks).filter((t) => !t.onBoard && t.assignees.includes(me) && t.state !== 'CLOSED');
+  const group = (xs) => {
     const g = {};
-    xs.forEach((x) => (g[boardOfRepo(x.repo) || x.repo] ||= []).push(x));
-    return Object.entries(g).sort((a, b) => b[1].length - a[1].length)
-      .flatMap(([name, list]) => [`${name}${withRepo ? '' : ` (${list.length})`}`, ...list.map(line), '']);
+    xs.forEach((x) => (g[boardOfRepo(x.repo) || x.repo || 'Other'] ||= []).push(x));
+    return Object.entries(g).sort((a, b) => b[1].length - a[1].length);
   };
-  const doing = mine.filter((t) => tabOf(t.status) === 'progress');
-  const review = mine.filter((t) => tabOf(t.status) === 'review');
-  const blocked = mine.filter((t) => tabOf(t.status) === 'blocked');
-  const out = [r.title, ''];
-  out.push(`${r.done} (${issues.length})`, '');
-  out.push(...(issues.length ? grouped(issues) : ['- Nothing closed', '']));
-  if (prs.length) out.push(...(listPRs ? [`Merged pull requests (${prs.length})`, '', ...grouped(prs)] : [`Also merged ${prs.length} pull request${prs.length > 1 ? 's' : ''}.`, '']));
-  out.push('Working on', ...(doing.length ? doing.map(line) : ['- Picking up the next To do']), '');
-  if (review.length) out.push(`Waiting for review: ${review.length} task${review.length > 1 ? 's' : ''}`, '');
-  out.push('Blocked', ...(blocked.length ? blocked.map(line) : ['- Nothing']));
+  const byTab = (k) => mine.filter((t) => tabOf(t.status) === k);
+  return { title: r.title, doneLabel: r.done, issues, issueGroups: group(issues), prs, prGroups: group(prs), listPRs,
+    doing: byTab('progress'), review: byTab('review'), blocked: byTab('blocked') };
+}
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+function standupText(m = standupModel()) {
+  const line = (t) => `- #${t.number} ${t.title}`;
+  const groups = (gs, counts) => gs.flatMap(([name, list]) => [`${name}${counts ? ` (${list.length})` : ''}`, ...list.map(line), '']);
+  const out = [m.title, '', `${m.doneLabel} (${m.issues.length})`, ''];
+  out.push(...(m.issues.length ? groups(m.issueGroups, true) : ['- Nothing closed', '']));
+  if (m.prs.length) out.push(...(m.listPRs ? [`Merged pull requests (${m.prs.length})`, '', ...groups(m.prGroups)] : [`Also merged ${plural(m.prs.length, 'pull request')}.`, '']));
+  out.push('Working on', ...(m.doing.length ? m.doing.map(line) : ['- Picking up the next To do']), '');
+  if (m.review.length) out.push(`Waiting for review: ${plural(m.review.length, 'task')}`, '');
+  out.push('Blocked', ...(m.blocked.length ? m.blocked.map(line) : ['- Nothing']));
   return out.join('\n');
+}
+
+// pasted into Teams/Slack/email: headings, bullets and links survive
+function standupPasteHTML(m = standupModel()) {
+  const li = (t) => `<li><a href="${esc(t.url)}">#${t.number}</a> ${esc(t.title)}</li>`;
+  const groups = (gs, counts) => gs.map(([name, list]) => `<p><i>${esc(name)}${counts ? ` (${list.length})` : ''}</i></p><ul>${list.map(li).join('')}</ul>`).join('');
+  return `<p><b>${esc(m.title)}</b></p>
+    <p><b>${esc(m.doneLabel)} (${m.issues.length})</b></p>${m.issues.length ? groups(m.issueGroups, true) : '<ul><li>Nothing closed</li></ul>'}
+    ${m.prs.length ? (m.listPRs ? `<p><b>Merged pull requests (${m.prs.length})</b></p>${groups(m.prGroups)}` : `<p>Also merged ${plural(m.prs.length, 'pull request')}.</p>`) : ''}
+    <p><b>Working on</b></p><ul>${m.doing.length ? m.doing.map(li).join('') : '<li>Picking up the next To do</li>'}</ul>
+    ${m.review.length ? `<p><b>Waiting for review:</b> ${plural(m.review.length, 'task')}</p>` : ''}
+    <p><b>Blocked</b></p><ul>${m.blocked.length ? m.blocked.map(li).join('') : '<li>Nothing</li>'}</ul>`;
+}
+
+// the preview inside the popover
+function standupPreview(m = standupModel()) {
+  const item = (t) => `<li><a href="${esc(t.url)}" target="_blank" rel="noopener"><span class="su-n">#${t.number}</span><span>${esc(t.title)}</span></a></li>`;
+  const groups = (gs) => gs.map(([name, list]) => `<div class="su-group">${esc(name)}<span>${list.length}</span></div><ul>${list.map(item).join('')}</ul>`).join('');
+  const section = (title, body, c) => `<section style="--c:${c}"><h4>${title}</h4>${body}</section>`;
+  const empty = (txt) => `<p class="su-empty">${txt}</p>`;
+  const stats = [[m.issues.length, 'closed', 'var(--done)'], [m.prs.length, m.prs.length === 1 ? 'PR merged' : 'PRs merged', 'var(--review)'],
+    [m.doing.length, 'in progress', 'var(--progress)'], [m.blocked.length, 'blocked', 'var(--blocked)']];
+  return `<div class="su-doc">
+    <div class="su-title">${esc(m.title)}</div>
+    <div class="su-stats">${stats.map(([n, l, c]) => `<span style="--c:${c}"><b>${n}</b>${l}</span>`).join('')}</div>
+    ${section(esc(m.doneLabel), m.issues.length ? groups(m.issueGroups) : empty('Nothing closed in this range.'), 'var(--done)')}
+    ${m.prs.length ? section('Merged pull requests', m.listPRs ? groups(m.prGroups) : empty(`Also merged ${plural(m.prs.length, 'pull request')}. Tick "List merged pull requests" to include them.`), 'var(--review)') : ''}
+    ${section('Working on', m.doing.length ? `<ul>${m.doing.map(item).join('')}</ul>` : empty('Picking up the next To do.'), 'var(--progress)')}
+    ${m.review.length ? section('Waiting for review', empty(plural(m.review.length, 'task')), 'var(--review)') : ''}
+    ${section('Blocked', m.blocked.length ? `<ul>${m.blocked.map(item).join('')}</ul>` : empty('Nothing blocked.'), 'var(--blocked)')}
+  </div>`;
 }
 
 const pop = $('#standup'), popBtn = $('#standup-btn');
 function paintStandup() {
   const r = rangeOf(), listPRs = su.prs ?? su.range === 'standup';
   const since = lastWorkday().toLocaleDateString(undefined, { weekday: 'long' });
-  const chips = [['standup', `Since ${since}`], ['week', 'This week'], ['7d', 'Last 7 days'], ['month', 'This month'], ['custom', 'Custom']];
-  pop.innerHTML = `<header><b>${su.range === 'standup' ? 'Standup' : 'Update'}</b><span>ready to paste in Teams</span>
+  const chips = [['standup', `Since ${lastWorkday().toLocaleDateString(undefined, { weekday: 'short' })}`], ['week', 'This week'], ['7d', '7 days'], ['month', 'This month'], ['custom', 'Custom']];
+  pop.innerHTML = `<header><b>${su.range === 'standup' ? 'Standup' : 'Update'}</b><span>copies with formatting for Teams, Slack or email</span>
       <button type="button" class="c-icon" data-copy-standup title="Copy (C)" aria-label="Copy">${ICON_COPY}</button></header>
     <div class="su-ranges" role="group" aria-label="Date range">${chips.map(([k, l]) => `<button type="button" class="chip" data-range="${k}" aria-pressed="${su.range === k}">${l}</button>`).join('')}</div>
     ${su.range === 'custom' ? `<div class="su-custom"><label>From <input type="date" id="su-from" value="${su.from}" max="${su.to}"></label>
       <label>To <input type="date" id="su-to" value="${su.to}" min="${su.from}" max="${isoDay(new Date())}"></label></div>` : ''}
     <label class="su-toggle"><input type="checkbox" id="su-prs" ${listPRs ? 'checked' : ''}> List merged pull requests</label>
-    <pre>${esc(standupText())}</pre>`;
+    ${standupPreview()}`;
 }
 function openStandup() {
   closePopovers('standup');
@@ -1156,7 +1191,12 @@ function closeStandup() { pop.classList.remove('on'); popBtn.setAttribute('aria-
 async function copyStandup() {
   if (!pop.classList.contains('on')) openStandup();
   const btn = pop.querySelector('[data-copy-standup]');
-  try { await navigator.clipboard.writeText(standupText()); toast('Standup copied to clipboard'); btn.innerHTML = ICON_OK; btn.classList.add('ok'); btn.title = 'Copied'; }
+  try {
+    const m = standupModel();
+    // rich + plain: apps that understand formatting keep headings, bullets and links
+    try { await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([standupPasteHTML(m)], { type: 'text/html' }), 'text/plain': new Blob([standupText(m)], { type: 'text/plain' }) })]); }
+    catch { await navigator.clipboard.writeText(standupText(m)); }
+    toast('Standup copied to clipboard'); btn.innerHTML = ICON_OK; btn.classList.add('ok'); btn.title = 'Copied'; }
   catch { btn.title = 'Copy blocked by browser'; }
   setTimeout(() => { if (btn.isConnected) { btn.innerHTML = ICON_COPY; btn.classList.remove('ok'); btn.title = 'Copy (C)'; } }, 1600);
 }
