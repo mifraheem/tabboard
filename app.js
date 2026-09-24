@@ -1849,7 +1849,9 @@ function quip() {
 function funChips() {
   if (!funOn() || !data.at) return '';
   const s = shipStreak(), earned = BADGES.filter(([id]) => fun.badges[id]).length;
-  return `<span class="fun-chips">${s >= 2 ? `<button type="button" class="fun-chip" data-fun="streak" title="Workdays in a row you closed or merged something">🔥 ${s}-day streak</button>` : ''}
+  const today = (data.recent || []).some((r) => r.closedAt && dayKey(r.closedAt) === isoDate(new Date()));
+  const tip = `Workdays in a row you closed or merged something. Weekends don't break it.${today ? '' : ' Close something today to keep it going.'}`;
+  return `<span class="fun-chips">${s >= 1 ? `<button type="button" class="fun-chip" data-fun="streak" title="${tip}">🔥 ${s}-day streak</button>` : ''}
     <button type="button" class="fun-chip" data-fun="badges" title="Achievements">🏅 ${earned}</button>
     ${showWeekChip() ? '<button type="button" class="fun-chip" data-fun="week" title="Your week in code (W)">🎁 Your week</button>' : ''}</span>`;
 }
