@@ -13,6 +13,11 @@ const fmtDate = (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'num
 const ROW_CAP = 12;
 let rowTasks = [];
 const $ = (s) => document.querySelector(s);
+// fun-extras settings live up here: the greeting reads them during startup
+const FUN_KEY = 'fun.v1';
+const fun = Object.assign({ on: true, badges: {}, notesDone: 0, zeroDay: '' }, (() => { try { return JSON.parse(localStorage.getItem(FUN_KEY)); } catch { return null; } })());
+const saveFun = () => { try { localStorage.setItem(FUN_KEY, JSON.stringify(fun)); } catch {} };
+const funOn = () => fun.on !== false;
 const avatarOf = (login, size = 60) => `https://github.com/${encodeURIComponent(login)}.png?size=${size}`;
 // ---------- GitHub data
 const EMPTY = { login: '', name: '', projects: [], openPRs: [], mentions: [], recent: [], at: 0 };
@@ -113,7 +118,7 @@ async function fetchAll(token) {
   const search = async (q) => (await gql(token, SEARCH, { q: `${scope} ${q}` })).search.nodes.filter((n) => n.__typename);
   const pr = (n) => ({ kind: n.__typename, title: n.title, number: n.number, url: n.url, repo: n.repository.name, author: n.author?.login,
     updatedAt: n.updatedAt, closedAt: n.mergedAt || n.closedAt, draft: n.isDraft || false, review: n.reviewDecision || null,
-    checks: n.commits?.nodes[0]?.commit.statusCheckRollup?.state || null,
+    checks: n.commits?.nodes[0]?.commit.statusCheckRollup?.state || null, labels: n.labels?.nodes || [],
     reviewers: (n.reviewRequests?.nodes || []).map((r) => r.requestedReviewer?.login).filter(Boolean) });
   const lists = await Promise.all(cfg.owners.map(async (o) => {
     const d = await gql(token, o.type === 'org'
@@ -163,7 +168,7 @@ async function fetchAll(token) {
 
 const cacheKey = (login) => 'cache.' + login;
 // bump when the shape of loaded data changes, so data saved by older code is refetched instead of shown
-const DATA_VERSION = 3;
+const DATA_VERSION = 4;
 const readCache = (login) => { try { const d = JSON.parse(localStorage.getItem(cacheKey(login))); return d?.v === DATA_VERSION ? d : null; } catch { return null; } };
 const writeCache = (d) => { try { localStorage.setItem(cacheKey(d.login), JSON.stringify(d)); } catch {} };
 
@@ -351,7 +356,11 @@ $('#work').addEventListener('click', (e) => {
   if (t.closest('[data-mini-cal]')) { const pk = t.closest('form').querySelector('.pick'); try { pk.showPicker(); } catch { pk.focus(); } return; }
   if (t.closest('[data-due]')) { const v = t.closest('[data-due]').dataset.due; noteDue = noteDue === v ? '' : v; rerenderKeepFocus(); return; }
   const n = findNote(t); if (!n && !t.closest('[data-notes-clear]')) return;
-  if (t.closest('[data-note-chk]')) { n.done = !n.done; n.doneAt = n.done ? Date.now() : null; saveNotes(); render(); }
+  if (t.closest('[data-note-chk]')) {
+    n.done = !n.done; n.doneAt = n.done ? Date.now() : null; saveNotes();
+    if (n.done) { const r = t.closest('[data-note-chk]').getBoundingClientRect(); confetti(r.left + r.width / 2, r.top); fun.notesDone++; saveFun(); }
+    render();
+  }
   else if (t.closest('[data-note-del]')) {
     // two-step: first click arms the button, second click within 3s deletes
     const btn = t.closest('[data-note-del]'), li = btn.closest('.note');
@@ -389,6 +398,7 @@ function closePopovers(keep) {
   if (keep !== 'env' && envpop.classList.contains('on')) closeEnvPop();
   if (keep !== 'acct') closeAcct();
   if (keep !== 'settings') closeSettings();
+  if (keep !== 'fun') closeFun();
 }
 
 // ---------- skeletons, shown only until the first load for this account arrives
@@ -408,7 +418,9 @@ function paintSummary() {
   const n = (k) => mine.filter((t) => tabOf(t.status) === k).length, due = dueNow().length;
   const parts = [[n('todo'), 'to do'], [n('progress'), 'in progress'], [n('blocked'), 'blocked'], [due, due === 1 ? 'note due today' : 'notes due today']]
     .filter(([c], i) => c || i < 2);
-  el.innerHTML = parts.map(([c, l]) => `<b>${c}</b> ${l}`).join(', ');
+  watchInboxZero(); checkBadges();
+  el.innerHTML = parts.map(([c, l]) => `<b>${c}</b> ${l}`).join(', ') + funChips();
+  paintFunFooter();
 }
 
 function render(animate) {
@@ -551,7 +563,7 @@ function paintIdentity() {
   $('#signin').hidden = !!connected;
   if (!connected) return paintSignin();
   const h = new Date().getHours();
-  $('#hello').textContent = `Good ${h < 5 ? 'evening' : h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'}, ${a.name || a.login}`;
+  $('#hello').textContent = greetingText(a.name || a.login);
   $('#me').src = avatarOf(a.login); $('#me').alt = a.login;
 }
 
@@ -1355,6 +1367,7 @@ async function openSettings(who, forced) {
   setPop.innerHTML = `<form class="set-form" autocomplete="off">
     <header><b>${forced ? 'Choose what to show' : 'Settings'}</b>${forced ? '' : '<button type="button" class="c-icon" data-set-close aria-label="Close">✕</button>'}</header>
     ${forced ? `<p class="set-hint">Your token can see ${who.orgs.length} organizations. Pick one or more. You can change this later from the gear icon.</p>` : ''}
+    <label class="set-owner set-toggle"><input type="checkbox" name="funOn" ${funOn() ? 'checked' : ''}><span>Fun extras<small>Streaks, achievements, celebrations, quips and a few surprises</small></span></label>
     <div class="set-label">Look</div>
     <div class="scope look" role="group" aria-label="Look">${[['brutal', 'Brutal'], ['clay', 'Clay'], ['soft', 'Soft']].map(([v, l]) => `<button type="button" data-look="${v}" aria-pressed="${document.documentElement.dataset.style === v}">${l}</button>`).join('')}</div>
     ${clocksSettingsHTML()}
@@ -1409,6 +1422,7 @@ setPop.addEventListener('submit', (e) => {
   const changed = JSON.stringify(next) !== JSON.stringify({ owners: cfg.owners, statusField: cfg.statusField, dueField: cfg.dueField, repoIssues: cfg.repoIssues });
   const nextClocks = [...f.querySelectorAll('[data-clock]')].map((b) => ({ tz: b.dataset.clock }));
   if (JSON.stringify(nextClocks) !== JSON.stringify(clocks.map((c) => ({ tz: c.tz })))) { clocks = nextClocks; saveClocks(); renderClocks(); }
+  if (f.elements.funOn && f.elements.funOn.checked !== funOn()) { fun.on = f.elements.funOn.checked; saveFun(); paintIdentity(); render(); }
   const nextNews = readNewsSettings(f), newsChanged = JSON.stringify(nextNews) !== JSON.stringify({ show: newsPrefs.show, topics: newsPrefs.topics, custom: newsPrefs.custom, sources: newsPrefs.sources });
   if (newsChanged) { Object.assign(newsPrefs, nextNews); saveNewsPrefs(); newsView.filter = 'all'; renderRail(); loadNews(true); }
   Object.assign(cfg, next); saveSettings();
@@ -1709,6 +1723,201 @@ function addKeyword(form) {
   b.type = 'button'; b.className = 'chip'; b.dataset.kw = k; b.setAttribute('aria-pressed', 'true'); b.title = 'Click to remove'; b.textContent = k + ' ✕';
   form.querySelector('.news-topics').append(b); input.value = ''; input.focus();
 }
+
+// ---------- fun extras: streak, celebrations, week in code, greetings, quips, achievements, easter eggs
+// all local, computed from data already loaded; one switch in Settings turns everything off
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const dayKey = (d) => isoDate(new Date(d));
+
+// 1. streak: consecutive workdays with something closed or merged; today counts once it happens, weekends never break it
+function shipStreak() {
+  const days = new Set((data.recent || []).filter((r) => r.closedAt).map((r) => dayKey(r.closedAt)));
+  const d = startOfDay(new Date());
+  if (!days.has(isoDate(d))) d.setDate(d.getDate() - 1);
+  let n = 0;
+  for (let i = 0; i < 62; i++, d.setDate(d.getDate() - 1)) {
+    const weekend = d.getDay() === 0 || d.getDay() === 6, hit = days.has(isoDate(d));
+    if (hit) n++; else if (!weekend) break;
+  }
+  return n;
+}
+
+// 3. week in code: Monday to now
+function weekStats() {
+  const mon = startOfDay(new Date()); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+  const wk = (data.recent || []).filter((r) => r.closedAt && new Date(r.closedAt) >= mon);
+  const issues = wk.filter((r) => r.kind !== 'PullRequest'), prs = wk.filter((r) => r.kind === 'PullRequest');
+  const byDay = {}; wk.forEach((r) => { const k = new Date(r.closedAt).toLocaleDateString(undefined, { weekday: 'long' }); byDay[k] = (byDay[k] || 0) + 1; });
+  const busiest = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0];
+  const repos = {}; wk.forEach((r) => { const k = boardOfRepo(r.repo) || r.repo; repos[k] = (repos[k] || 0) + 1; });
+  const top = Object.entries(repos).sort((a, b) => b[1] - a[1])[0];
+  const bugs = issues.filter((r) => (r.labels || []).some((l) => /bug/i.test(l.name))).length;
+  const streak = shipStreak();
+  const title = bugs >= 3 ? ['Bug Exterminator', 'Nothing crawls past you.'] : prs.length >= 5 ? ['PR Machine', 'Merge button, meet your match.']
+    : issues.length >= 10 ? ['Ship-It Captain', 'The backlog fears you.'] : streak >= 5 ? ['Metronome', 'Something shipped every single day.']
+    : wk.length ? ['Steady Shipper', 'Small steps, real progress.'] : ['Recharging', 'Quiet weeks count too.'];
+  return { issues: issues.length, prs: prs.length, busiest, top, streak, title, since: mon };
+}
+const showWeekChip = () => { const d = new Date(); return d.getDay() === 0 || d.getDay() === 6 || (d.getDay() === 5 && d.getHours() >= 15); };
+
+// 6. achievements: checked against current data; once earned they stay
+const BADGES = [
+  ['streak5', '🔥', 'On a roll', 'A 5-workday shipping streak', () => shipStreak() >= 5],
+  ['night', '🦉', 'Night Owl', 'Closed or merged something between midnight and 4 AM', () => (data.recent || []).some((r) => r.closedAt && new Date(r.closedAt).getHours() < 4)],
+  ['early', '🐦', 'Early Bird', 'Shipped something before 8 AM', () => (data.recent || []).some((r) => { const h = r.closedAt && new Date(r.closedAt).getHours(); return h >= 4 && h < 8; })],
+  ['bugs', '🪲', 'Bug Squasher', 'Closed 10 issues labeled bug', () => (data.recent || []).filter((r) => r.kind !== 'PullRequest' && (r.labels || []).some((l) => /bug/i.test(l.name))).length >= 10],
+  ['prs', '🚢', 'PR Machine', 'Merged 10 pull requests in two months', () => (data.recent || []).filter((r) => r.kind === 'PullRequest').length >= 10],
+  ['weekend', '🏖️', 'Weekend Warrior', 'Shipped something on a weekend', () => (data.recent || []).some((r) => r.closedAt && [0, 6].includes(new Date(r.closedAt).getDay()))],
+  ['zero', '🧘', 'Inbox Zero', 'Emptied your To do', () => !!fun.zeroDay],
+  ['unblocked', '🔓', 'Unblocked', 'Nothing of yours blocked', () => data.at && myCount('blocked') === 0],
+  ['notes', '📝', 'Note Taker', 'Finished 10 notes', () => fun.notesDone >= 10],
+];
+function myCount(tab) { return data.projects.flatMap((p) => p.tasks).filter((t) => !t.onBoard && t.assignees.includes(data.login) && tabOf(t.status) === tab).length; }
+let badgesChecked = false;
+function checkBadges() {
+  if (!funOn() || !data.at) return;
+  const fresh = BADGES.filter(([id, , , , test]) => !fun.badges[id] && test());
+  fresh.forEach(([id]) => { fun.badges[id] = isoDate(new Date()); });
+  if (fresh.length) saveFun();
+  // first check after install only records; later unlocks get a toast
+  if (badgesChecked && fresh.length) toast(`Achievement unlocked: ${fresh[0][1]} ${fresh[0][2]}`);
+  badgesChecked = true;
+}
+
+// 2. celebrations
+function confetti(x = innerWidth / 2, y = innerHeight / 3) {
+  if (!funOn() || reducedMotion()) return;
+  const c = document.createElement('canvas'), ctx = c.getContext('2d'), dpr = devicePixelRatio || 1;
+  c.className = 'confetti'; c.width = innerWidth * dpr; c.height = innerHeight * dpr; ctx.scale(dpr, dpr); document.body.append(c);
+  const cs = getComputedStyle(document.documentElement), colors = ['--todo', '--progress', '--review', '--done', '--blocked', '--staging'].map((v) => cs.getPropertyValue(v).trim());
+  const bits = Array.from({ length: 70 }, () => ({ x, y, vx: (Math.random() - .5) * 9, vy: -Math.random() * 9 - 3, s: 4 + Math.random() * 5, r: Math.random() * 6, vr: (Math.random() - .5) * .3, c: colors[Math.floor(Math.random() * colors.length)] }));
+  const start = performance.now();
+  (function frame(t) {
+    const k = (t - start) / 1100; ctx.clearRect(0, 0, innerWidth, innerHeight);
+    bits.forEach((b) => { b.vy += .32; b.x += b.vx; b.y += b.vy; b.r += b.vr; ctx.save(); ctx.globalAlpha = Math.max(0, 1 - k); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.fillStyle = b.c; ctx.fillRect(-b.s / 2, -b.s / 4, b.s, b.s / 2); ctx.restore(); });
+    k < 1 ? requestAnimationFrame(frame) : c.remove();
+  })(start);
+}
+// To do reaching zero: celebrate once a day
+let lastTodo = null;
+function watchInboxZero() {
+  if (!funOn() || !data.at) return;
+  const n = myCount('todo');
+  if (lastTodo > 0 && n === 0 && fun.zeroDay !== isoDate(new Date())) { fun.zeroDay = isoDate(new Date()); saveFun(); confetti(); toast('Inbox zero. Go touch grass. 🌱'); checkBadges(); }
+  lastTodo = n;
+}
+
+// 4. greetings that notice the moment
+function greetingText(name) {
+  const d = new Date(), h = d.getHours(), wd = d.getDay(), base = `Good ${h < 5 ? 'evening' : h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'}, ${name}`;
+  if (!funOn()) return base;
+  if (h >= 23 || h < 4) return `Still up, ${name}?`;
+  if (wd === 5 && h >= 15) return `Happy Friday, ${name}`;
+  if (wd === 1 && h < 12) return `Fresh week, ${name}`;
+  if (wd === 0 || wd === 6) return `Weekend mode, ${name}`;
+  return base;
+}
+
+// 5. quip: the moment first, otherwise a dev one-liner that changes daily
+const QUIPS = [
+  '"It works on my machine" is not a deployment strategy.', 'There are two hard things: cache invalidation, naming things, and off-by-one errors.',
+  'A good commit message is a love letter to future you.', 'Weeks of coding can save you hours of planning.', 'The best code is the code you never had to write.',
+  '99 little bugs in the code. Take one down, patch it around. 127 little bugs in the code.', 'Git blame is just archaeology with a grudge.',
+  'Any sufficiently advanced bug is indistinguishable from a feature.', 'Deleted code is debugged code.', "It's not a bug, it's an undocumented feature.",
+  'Real programmers count from 0.', 'Rubber duck debugging: 100% success rate, 0% credit to the duck.', 'TODO: write a better TODO.',
+  'Your future self will thank you for that test. Or curse you for skipping it.', 'Measure twice, `rm -rf` once.', 'First, solve the problem. Then, write the code.',
+  'Simplicity is prerequisite for reliability.', 'Nothing is more permanent than a temporary fix.', "Documentation is a love letter you write to your team's future.",
+  'Premature optimization is the root of all evil. Premature deployment is a close second.', 'Code never lies. Comments sometimes do.',
+  'A clean build on the first try is a sign from the universe. Do not question it.', 'Every senior developer was once a junior who refused to give up.',
+  'Estimate. Double it. Add a sprint.', 'The cloud is just someone else\'s computer having a bad day.', 'Naming a variable `data2` is a cry for help.',
+];
+function quip() {
+  const d = new Date(), h = d.getHours(), wd = d.getDay();
+  if (wd === 5 && h >= 15) return 'Friday afternoon. Step away from `git push --force`.';
+  if (h >= 23 || h < 4) return 'Your bugs will still be here tomorrow. Fewer of them after sleep.';
+  if (wd === 1 && h < 12) return 'Coffee first. Then the backlog.';
+  if (data.at) {
+    const w = weekStats();
+    if (w.issues + w.prs >= 10) return `${w.issues + w.prs} things shipped this week. Absolute legend.`;
+    if (myCount('blocked') >= 3) return 'Three things blocked. Time to go unblock someone (maybe yourself).';
+  }
+  const n = Math.floor(startOfDay(d) / 864e5);
+  return QUIPS[n % QUIPS.length];
+}
+
+// chips under the greeting: streak, achievements, week in code
+function funChips() {
+  if (!funOn() || !data.at) return '';
+  const s = shipStreak(), earned = BADGES.filter(([id]) => fun.badges[id]).length;
+  return `<span class="fun-chips">${s >= 2 ? `<button type="button" class="fun-chip" data-fun="streak" title="Workdays in a row you closed or merged something">🔥 ${s}-day streak</button>` : ''}
+    <button type="button" class="fun-chip" data-fun="badges" title="Achievements">🏅 ${earned}</button>
+    ${showWeekChip() ? '<button type="button" class="fun-chip" data-fun="week" title="Your week in code (W)">🎁 Your week</button>' : ''}</span>`;
+}
+function paintFunFooter() {
+  const q = $('#quip'), duck = $('#duck');
+  if (q) q.textContent = funOn() ? quip() : '';
+  if (duck) duck.hidden = !funOn();
+}
+
+// small panel for achievements and the week card
+const funPop = $('#fun-pop');
+function openFun(kind, anchor) {
+  closePopovers('fun');
+  if (kind === 'week') {
+    const w = weekStats();
+    funPop.innerHTML = `<div class="wk"><div class="wk-kicker">Your week in code · since ${w.since.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
+      <div class="wk-title">${w.title[0]}</div><div class="wk-sub">${w.title[1]}</div>
+      <div class="wk-grid"><div><b>${w.issues}</b><span>issues closed</span></div><div><b>${w.prs}</b><span>PRs merged</span></div>
+        <div><b>${w.streak}</b><span>day streak</span></div><div><b>${w.busiest ? esc(w.busiest[0].slice(0, 3)) : '–'}</b><span>busiest day</span></div></div>
+      ${w.top ? `<p class="wk-top">Most of it in <b>${esc(w.top[0])}</b> (${w.top[1]})</p>` : ''}
+      <button type="button" class="btn primary" data-fun-copy>Copy to share</button></div>`;
+  } else {
+    funPop.innerHTML = `<div class="bdg-head"><b>Achievements</b><span>${BADGES.filter(([id]) => fun.badges[id]).length} of ${BADGES.length}</span></div>
+      <div class="bdg-grid">${BADGES.map(([id, ic, name, desc]) => `<div class="bdg${fun.badges[id] ? '' : ' locked'}" title="${esc(desc)}${fun.badges[id] ? ` · earned ${fun.badges[id]}` : ''}">
+        <span class="bdg-ic">${fun.badges[id] ? ic : '🔒'}</span><b>${esc(name)}</b><small>${esc(desc)}</small></div>`).join('')}</div>`;
+  }
+  const r = (anchor || $('#hello')).getBoundingClientRect();
+  funPop.style.top = r.bottom + 8 + 'px'; funPop.style.left = Math.max(12, Math.min(r.left, innerWidth - 372)) + 'px';
+  funPop.classList.add('on');
+}
+function closeFun() { funPop.classList.remove('on'); }
+document.addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-fun]');
+  if (chip) { e.stopPropagation(); const k = chip.dataset.fun === 'streak' ? 'week' : chip.dataset.fun; funPop.classList.contains('on') && funPop.dataset.kind === k ? closeFun() : (funPop.dataset.kind = k, openFun(k, chip)); return; }
+  if (e.target.closest('[data-fun-copy]')) {
+    const w = weekStats();
+    navigator.clipboard.writeText(`My week in code: ${w.title[0]}. ${w.issues} issues closed, ${w.prs} PRs merged, ${w.streak}-day streak${w.busiest ? `, busiest on ${w.busiest[0]}` : ''}. (via Tabboard)`).then(() => toast('Week copied to clipboard')).catch(() => {});
+    return;
+  }
+  if (funPop.classList.contains('on') && !funPop.contains(e.target)) closeFun();
+});
+
+// 7. easter eggs
+const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+let konami = 0, retroTimer;
+addEventListener('keydown', (e) => {
+  if (!funOn() || e.target.tagName === 'INPUT') return;
+  konami = e.key === KONAMI[konami] || e.key.toLowerCase() === KONAMI[konami] ? konami + 1 : e.key === KONAMI[0] ? 1 : 0;
+  if (konami === KONAMI.length) {
+    konami = 0; document.documentElement.classList.add('retro'); toast('Retro mode for 60 seconds. >_');
+    clearTimeout(retroTimer); retroTimer = setTimeout(() => document.documentElement.classList.remove('retro'), 60000);
+  }
+  if (e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey && data.at) openFun('week');
+});
+$('#q').addEventListener('input', (e) => { if (funOn() && e.target.value.trim().toLowerCase() === 'sudo') toast('Nice try. 🔒 This dashboard runs as you.'); });
+const DUCK_LINES = ['Quack. Explain it to me line by line.', 'Quack? What did you expect it to do?', 'Quack. Have you tried reading the error message?',
+  'Quack. Is it plugged in? Is the env var set?', 'Quack. Print it out. What is it actually?', 'Quack. When did it last work?', 'Quack quack. (That means check the cache.)'];
+let duckN = 0;
+function quack() {
+  toast(`🦆 ${DUCK_LINES[duckN++ % DUCK_LINES.length]}`);
+  try {
+    const a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(520, a.currentTime); o.frequency.exponentialRampToValueAtTime(260, a.currentTime + .18);
+    g.gain.setValueAtTime(.06, a.currentTime); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + .2);
+    o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + .21); o.onended = () => a.close();
+  } catch {}
+}
+$('#duck')?.addEventListener('click', quack);
 
 // boot: paint the last load instantly, then refresh from GitHub if it is stale
 $('#refresh').addEventListener('click', () => loadLive(true));
