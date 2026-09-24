@@ -1346,7 +1346,7 @@ addEventListener('keydown', (e) => {
 
 // ---------- settings: which orgs to show, board field names (per account)
 const setPop = $('#settings'), setBtn = $('#settings-btn');
-let setForced = false;
+let setForced = false, settingsPane = 'general';
 async function openSettings(who, forced) {
   closePopovers('settings');
   const a = activeAcct(); if (!a) return;
@@ -1364,27 +1364,45 @@ async function openSettings(who, forced) {
   const picked = new Set((cfg.owners || []).map((o) => o.type + ':' + o.login));
   const opt = (type, login, label, sub) => `<label class="set-owner"><input type="checkbox" name="owner" value="${type}:${esc(login)}" ${picked.has(type + ':' + login) ? 'checked' : ''}>
     <img src="${esc(avatarOf(login, 40))}" alt=""><span>${esc(label)}${sub ? `<small>${esc(sub)}</small>` : ''}</span></label>`;
-  setPop.innerHTML = `<form class="set-form" autocomplete="off">
+  const looks = [['brutal', 'Brutal'], ['clay', 'Clay'], ['soft', 'Soft']];
+  const boards = `<div class="set-group"><div class="set-label">Show boards from</div>
+      <div class="set-owners">${who.orgs.map((o) => opt('org', o.login, o.name, o.name !== o.login ? o.login : '')).join('')}
+        ${opt('user', who.login, 'Your own projects', '@' + who.login)}</div></div>
+    <div class="set-group"><label class="set-owner set-toggle"><input type="checkbox" name="repoIssues" ${cfg.repoIssues ? 'checked' : ''}><span>Include issues from repos without a board<small>Issues assigned to you that are not on any project board</small></span></label></div>
+    <div class="set-group"><div class="set-label">Board field names</div>
+      <div class="set-fields"><label>Status field<input name="statusField" value="${esc(cfg.statusField)}" required></label>
+        <label>Due date field<input name="dueField" value="${esc(cfg.dueField)}" required></label></div>
+      <p class="set-hint">These must match the field names on your GitHub Projects boards.</p></div>`;
+  const panes = [
+    ['general', 'General', `<div class="set-group"><div class="set-label">Look</div>
+        <div class="look-tiles">${looks.map(([v, l]) => `<button type="button" class="look-tile" data-look-pick="${v}" aria-pressed="${document.documentElement.dataset.style === v}">
+          <span class="lp lp-${v}" aria-hidden="true"><i></i><i></i><i></i></span><b>${l}</b></button>`).join('')}</div>
+        <p class="set-hint">Light or dark follows your system; switch it with the sun/moon button.</p></div>
+      <div class="set-group"><label class="set-owner set-toggle"><input type="checkbox" name="funOn" ${funOn() ? 'checked' : ''}><span>Fun extras<small>Streaks, achievements, celebrations, quips and a few surprises</small></span></label></div>`],
+    ['boards', 'Boards', boards],
+    ['clocks', 'Clocks', `<div class="set-group">${clocksSettingsHTML()}</div>`],
+    ['news', 'News', `<div class="set-group">${newsSettingsHTML()}</div>`],
+  ];
+  const tab = forced ? 'boards' : settingsPane;
+  // every pane stays in the form (hidden ones too) so Save reads them all
+  setPop.innerHTML = `<form class="set-form${forced ? ' forced' : ''}" autocomplete="off">
     <header><b>${forced ? 'Choose what to show' : 'Settings'}</b>${forced ? '' : '<button type="button" class="c-icon" data-set-close aria-label="Close">✕</button>'}</header>
-    ${forced ? `<p class="set-hint">Your token can see ${who.orgs.length} organizations. Pick one or more. You can change this later from the gear icon.</p>` : ''}
-    <label class="set-owner set-toggle"><input type="checkbox" name="funOn" ${funOn() ? 'checked' : ''}><span>Fun extras<small>Streaks, achievements, celebrations, quips and a few surprises</small></span></label>
-    <div class="set-label">Look</div>
-    <div class="scope look" role="group" aria-label="Look">${[['brutal', 'Brutal'], ['clay', 'Clay'], ['soft', 'Soft']].map(([v, l]) => `<button type="button" data-look="${v}" aria-pressed="${document.documentElement.dataset.style === v}">${l}</button>`).join('')}</div>
-    ${clocksSettingsHTML()}
-    <div class="set-label">Show boards from</div>
-    <div class="set-owners">${who.orgs.map((o) => opt('org', o.login, o.name, o.name !== o.login ? o.login : '')).join('')}
-      ${opt('user', who.login, 'Your own projects', '@' + who.login)}</div>
-    <label class="set-owner set-toggle"><input type="checkbox" name="repoIssues" ${cfg.repoIssues ? 'checked' : ''}><span>Include issues from repos without a board<small>Issues assigned to you that are not on any project board</small></span></label>
-    <div class="set-label">Board field names</div>
-    <div class="set-fields"><label>Status field<input name="statusField" value="${esc(cfg.statusField)}" required></label>
-      <label>Due date field<input name="dueField" value="${esc(cfg.dueField)}" required></label></div>
-    <p class="set-hint">These must match the field names on your GitHub Projects boards.</p>
-    ${newsSettingsHTML()}
-    <p class="acct-msg err" role="alert"></p>
-    <div class="acct-actions">${forced ? '' : '<button type="button" class="btn" data-set-close>Cancel</button>'}<button class="btn primary">Save</button></div>
+    ${forced ? `<p class="set-hint">Your token can see ${who.orgs.length} organizations. Pick one or more. You can change this later from the gear icon.</p>` : `
+    <nav class="set-tabs" role="tablist">${panes.map(([k, l]) => `<button type="button" role="tab" data-set-tab="${k}" aria-selected="${k === tab}">${l}</button>`).join('')}</nav>`}
+    <div class="set-body">${panes.map(([k, , html]) => `<section class="set-pane" data-pane="${k}" role="tabpanel"${k === tab ? '' : ' hidden'}>${html}</section>`).join('')}</div>
+    <footer class="set-foot"><p class="acct-msg err" role="alert"></p>
+      ${forced ? '' : '<button type="button" class="btn" data-set-close>Cancel</button>'}<button class="btn primary">Save</button></footer>
   </form>`;
   placeSettings();
 }
+function showPane(k) {
+  settingsPane = k;
+  setPop.querySelectorAll('[data-set-tab]').forEach((b) => b.setAttribute('aria-selected', b.dataset.setTab === k));
+  setPop.querySelectorAll('[data-pane]').forEach((p) => { p.hidden = p.dataset.pane !== k; });
+  setPop.querySelector('.set-body').scrollTop = 0;
+}
+// a required field on a hidden tab would block Save silently: open its tab first
+setPop.addEventListener('invalid', (e) => { const pane = e.target.closest('[data-pane]'); if (pane?.hidden) showPane(pane.dataset.pane); }, true);
 function placeSettings() {
   const r = setBtn.getBoundingClientRect();
   setPop.style.top = r.bottom + 8 + 'px';
@@ -1395,9 +1413,11 @@ function closeSettings() { if (setForced) return; setPop.classList.remove('on');
 setBtn.addEventListener('click', (e) => { e.stopPropagation(); setPop.classList.contains('on') ? closeSettings() : openSettings(null, false); });
 setPop.addEventListener('click', (e) => {
   e.stopPropagation();
-  const look = e.target.closest('[data-look]');
-  // applies at once so the two looks can be compared; not tied to Save
-  if (look) { setStyle(look.dataset.look); setPop.querySelectorAll('[data-look]').forEach((b) => b.setAttribute('aria-pressed', b === look)); render(); placeSettings(); return; }
+  const st = e.target.closest('[data-set-tab]');
+  if (st) { showPane(st.dataset.setTab); return; }
+  const look = e.target.closest('[data-look-pick]');
+  // applies at once so the looks can be compared; not tied to Save
+  if (look) { setStyle(look.dataset.lookPick); setPop.querySelectorAll('[data-look-pick]').forEach((b) => b.setAttribute('aria-pressed', b === look)); render(); return; }
   const tp = e.target.closest('[data-topic]');
   if (tp) { tp.setAttribute('aria-pressed', tp.getAttribute('aria-pressed') !== 'true'); return; }
   if (e.target.closest('[data-kw]')) { e.target.closest('[data-kw]').remove(); return; }
