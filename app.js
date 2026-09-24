@@ -2010,9 +2010,13 @@ if (window.chrome?.tabs && window.chrome?.storage) {
   const b = $('#to-chrome');
   b.hidden = false;
   b.addEventListener('click', () => {
-    chrome.storage.local.set({ ntmode: 'chrome' });
     toast('Switching to Chrome’s new tab. Click Tabboard’s toolbar icon or press Alt+Shift+T to come back.');
-    setTimeout(() => chrome.tabs.update({ url: 'chrome://new-tab-page/' }), 1100);
+    // this exact tab, not "the active tab"; any refusal is shown instead of failing silently
+    chrome.storage.local.set({ ntmode: 'chrome' }).then(() => new Promise((ok) => chrome.tabs.getCurrent(ok))).then((tab) => {
+      setTimeout(() => chrome.tabs.update(tab.id, { url: 'chrome://new-tab-page/' }, () => {
+        if (chrome.runtime.lastError) { chrome.storage.local.set({ ntmode: 'tabboard' }); toast(`Chrome refused the switch: ${chrome.runtime.lastError.message}`); }
+      }), 1100);
+    }).catch((e) => toast(`Couldn't switch: ${e.message}`));
   });
 }
 

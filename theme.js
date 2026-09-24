@@ -2,7 +2,13 @@
   // The page stays hidden for the moment it takes to read it; app.js waits on it before loading anything.
   window.tabboardMode = window.chrome?.storage?.local
     ? (document.documentElement.style.visibility = 'hidden', chrome.storage.local.get('ntmode').then(({ ntmode }) => {
-        if (ntmode === 'chrome') { chrome.tabs.update({ url: 'chrome://new-tab-page/' }); return 'chrome'; }
+        if (ntmode === 'chrome') {
+          chrome.tabs.getCurrent((tab) => chrome.tabs.update(tab.id, { url: 'chrome://new-tab-page/' }, () => {
+            // if Chrome won't open its page, fall back to Tabboard rather than a blank tab
+            if (chrome.runtime.lastError) chrome.storage.local.set({ ntmode: 'tabboard' }).then(() => location.reload());
+          }));
+          return 'chrome';
+        }
         document.documentElement.style.visibility = '';
         return 'tabboard';
       }).catch(() => { document.documentElement.style.visibility = ''; return 'tabboard'; }))
