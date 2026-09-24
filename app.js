@@ -1112,7 +1112,7 @@ function waitingItems() {
   const add = (x, why, c) => { if (!seen.has(x.url)) { seen.add(x.url); out.push({ ...x, why, whyColor: c }); } };
   prs.filter((p) => p.reviewers.includes(me)).forEach((p) => add(p, 'Review requested', 'var(--review)'));
   data.mentions.forEach((m) => add(m, 'Mentioned you', 'var(--progress)'));
-  prs.filter((p) => p.author === me).forEach((p) => add(p, p.review === 'CHANGES_REQUESTED' ? 'Changes requested' : 'Your PR', p.review === 'CHANGES_REQUESTED' ? 'var(--blocked)' : null));
+  prs.filter((p) => p.author === me).forEach((p) => add(p, p.review === 'CHANGES_REQUESTED' ? 'Changes requested' : 'Your PR', null));
   // then every other open PR in the repos behind the boards in the projects bar
   const ids = new Set(barProjects().map((p) => p.id)), repos = new Set();
   data.projects.filter((p) => ids.has(boardKey(p))).forEach((p) => p.tasks.forEach((t) => t.repo && repos.add(t.repo)));
@@ -1120,6 +1120,9 @@ function waitingItems() {
   return out;
 }
 
+// every PR tag gets its own color; unknown ones fall back to a light neutral, never the text color
+const WHY_COLOR = { 'Your PR': 'var(--todo)', 'Review requested': 'var(--review)', 'Mentioned you': 'var(--progress)',
+  'Changes requested': 'var(--blocked)', Approved: 'var(--done)', Draft: 'var(--backlog)' };
 function renderWaiting() {
   if (data.extrasPending) { const el = $('#waiting'); el.className = 'waiting calm'; el.innerHTML = '<span class="sk" style="width:320px;height:14px" aria-hidden="true"></span>'; return; }
   if (firstLoad()) { const el = $('#waiting'); el.className = 'waiting calm'; el.innerHTML = '<span class="sk" style="width:320px;height:14px" aria-hidden="true"></span>'; return; }
@@ -1136,7 +1139,7 @@ function renderWaiting() {
     return `<a class="w-row" href="${esc(x.url)}" style="--c:${ck ? ck[1] : 'var(--muted)'}">
       <span class="kind">${x.kind === 'PullRequest' ? ICON_PR : ICON_AT}</span>
       <span class="title"><span class="num">${esc(x.repo)}#${x.number}</span>&nbsp;&nbsp;${esc(x.title)}</span>
-      <span class="why">${x.why !== 'Open' ? `<b style="--c:${x.whyColor || 'var(--soft)'}">${x.why}</b>` : ''}${ck ? `<b>${ck[0]}</b>` : ''}<span>${ago(x.updatedAt)}</span>
+      <span class="why">${x.why !== 'Open' ? `<b style="--c:${x.whyColor || WHY_COLOR[x.why] || 'var(--raise)'}">${x.why}</b>` : ''}${ck ? `<b>${ck[0]}</b>` : ''}<span>${ago(x.updatedAt)}</span>
         ${x.author ? `<img src="${esc(avatarOf(x.author, 40))}" alt="${esc(x.author)}" title="${esc(x.author)}">` : ''}</span></a>`;
   }).join('') + (items.length > CAP ? `<button class="more" data-prs-toggle>${state.prsOpen ? 'Show fewer' : `Show all ${items.length}`}</button>` : '');
 }
