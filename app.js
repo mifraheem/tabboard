@@ -206,12 +206,29 @@ function paintMeta() {
   $('#refresh').title = data.at ? `Refresh (last loaded ${new Date(data.at).toLocaleString()})` : 'Refresh';
 }
 
+// offline: a badge says what you're looking at; coming back online refreshes on its own
+let offline = false;
+function setOffline(on) {
+  offline = on;
+  const el = $('#offline');
+  if (!el) return;
+  el.hidden = !on;
+  if (on) el.querySelector('span').textContent = data.at ? `showing data from ${new Date(data.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : 'nothing saved yet';
+}
+addEventListener('offline', () => setOffline(true));
+addEventListener('online', () => {
+  if (!offline) return;
+  toast('Back online. Refreshing…');
+  loadError = '';
+  setTimeout(() => { loadLive(true); loadNews(true); }, 600);
+});
 let loading = false, reloadQueued = false;
 async function loadLive(force) {
   const a = activeAcct(), token = a && tokens[a.login];
   if (!token) return;
   if (loading) { if (force) reloadQueued = true; return; }
   if (!force && data.at && Date.now() - data.at < STALE_MS) return;
+  if (!navigator.onLine) { setOffline(true); if (!data.at) { loadError = "Couldn't reach GitHub. You're offline"; setData(null); } return; }
   loading = true; loadError = ''; if (!data.at) setData(null);
   $('#refresh').classList.add('spin'); $('#ago').textContent = 'Loading…';
   try {
@@ -226,9 +243,10 @@ async function loadLive(force) {
     if (d.needsSetup) { openSettings(d.who, true); return; }
     writeCache(d);
     a.name = d.name; saveAccts();
-    paintIdentity(); setData(d);
+    paintIdentity(); setData(d); setOffline(false);
   } catch (e) {
     if (e.auth) { delete tokens[a.login]; saveTokens(); signinReason = `GitHub no longer accepts the token for @${a.login}. Paste a new one to reconnect.`; paintIdentity(); }
+    else if (/reach GitHub/.test(e.message)) { if (!data.at) loadError = e.message; setOffline(true); paintMeta(); if (!data.at) setData(null); }
     else { loadError = e.message; paintMeta(); $('#ago').textContent = '⚠ ' + e.message; if (!data.at) setData(null); }
   } finally {
     loading = false; $('#refresh').classList.remove('spin');
@@ -1675,6 +1693,7 @@ async function fromHF() {
 }
 
 async function loadNews(force) {
+  if (!navigator.onLine) return;
   if (!newsPrefs.show || newsLoading) return;
   if (!force && news && news.key === newsKey() && Date.now() - news.at < NEWS_TTL) return;
   const topics = activeTopics(), src = newsPrefs.sources, token = tokens[accts.active];

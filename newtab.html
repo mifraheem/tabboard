@@ -74,6 +74,15 @@
   .scope button[aria-pressed="true"] { background: var(--raise); color: var(--text); }
   .icon-btn { background: none; border: 1px solid transparent; color: var(--muted); border-radius: 8px;
     height: 36px; padding: 0 8px; cursor: pointer; font: inherit; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .offline { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 10px; font-size: 12.5px; white-space: nowrap;
+    background: color-mix(in srgb, var(--blocked) 14%, var(--surface)); color: var(--text); border: 1px solid color-mix(in srgb, var(--blocked) 40%, transparent); }
+  .offline[hidden] { display: none; }
+  .offline i { width: 7px; height: 7px; border-radius: 50%; background: var(--blocked); }
+  .offline span { color: var(--soft); }
+  [data-style="brutal"] .offline { border: var(--bw) solid var(--brd); background: var(--blocked); color: #000; box-shadow: var(--hard-sm); }
+  [data-style="brutal"] .offline span { color: #000; font-family: var(--mono); }
+  [data-style="brutal"] .offline i { background: #000; }
+  [data-style="clay"] .offline { border: 0; border-radius: 999px; box-shadow: var(--clay-sm); }
   .icon-btn.spin svg { animation: spin .8s linear infinite; }
   .icon-btn:hover { color: var(--text); border-color: var(--line); }
   .sun { display: none; }
@@ -864,6 +873,7 @@
     <div class="scope" role="group" aria-label="Whose tasks">
       <button data-scope="mine">Mine</button><button data-scope="all">Everyone</button>
     </div>
+    <div class="offline" id="offline" role="status" hidden title="No connection to GitHub. Tabboard refreshes by itself when you're back online."><i></i><b>Offline</b><span></span></div>
     <button class="icon-btn" id="refresh" title="Refresh"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg><span id="ago"></span></button>
     <button class="icon-btn standup-btn" id="standup-btn" aria-expanded="false" title="Standup (S)">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 4h8M9 2h6v4H9zM6 4H5a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-1M8 11h8M8 15h5"/></svg>Standup</button>
