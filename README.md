@@ -28,6 +28,8 @@ Tabboard isn't on the Chrome Web Store yet. To install it from source:
 
 Chrome only replaces the new tab page in the profile where the extension is installed.
 
+**Want Chrome's normal new tab sometimes?** Click the ⇄ button in Tabboard's top bar. New tabs then open Chrome's own page until you click Tabboard's toolbar icon or press **Alt+Shift+T** to switch back. The icon shows an "off" badge while Chrome's page is in use. Pin the icon (puzzle-piece menu → pin) for one-click switching.
+
 ## Signing in
 
 **Sign in with GitHub** uses GitHub's OAuth device flow. You get a short code, enter it on github.com and approve. There's no server involved: the token goes from GitHub straight to your browser.
@@ -55,7 +57,8 @@ It's plain HTML, CSS and JavaScript with no build step.
 | `manifest.json` | Extension manifest (Manifest V3) |
 | `newtab.html` | Page markup and all styles, including the three looks |
 | `app.js` | Everything else: GitHub loading, rendering, settings, sign-in |
-| `theme.js` | Applies light/dark and the look before the page draws |
+| `theme.js` | Applies light/dark and the look before the page draws, and hands off to Chrome's new tab when that mode is on |
+| `background.js` | The toolbar icon and Alt+Shift+T: switches new tabs between Tabboard and Chrome |
 | `test/index.html` | The same page as a plain file, for trying changes without reloading the extension |
 
 To try changes quickly, open `test/index.html` in Chrome and paste a token (sign-in with GitHub only works in the installed extension). After editing `newtab.html`, regenerate the test page:

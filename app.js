@@ -2005,12 +2005,27 @@ function quack() {
 }
 $('#duck')?.addEventListener('click', quack);
 
+// switch to Chrome's own new tab page; the toolbar icon or Alt+Shift+T brings Tabboard back
+if (window.chrome?.tabs && window.chrome?.storage) {
+  const b = $('#to-chrome');
+  b.hidden = false;
+  b.addEventListener('click', () => {
+    chrome.storage.local.set({ ntmode: 'chrome' });
+    toast('Switching to Chrome’s new tab. Click Tabboard’s toolbar icon or press Alt+Shift+T to come back.');
+    setTimeout(() => chrome.tabs.update({ url: 'chrome://new-tab-page/' }), 1100);
+  });
+}
+
 // boot: paint the last load instantly, then refresh from GitHub if it is stale
-$('#refresh').addEventListener('click', () => loadLive(true));
-setData(activeAcct() ? readCache(accts.active) : null);
-document.fonts.ready.then(() => render());
-// clocks start once everything above is defined, then tick on the minute
-renderClocks();
-setTimeout(function tick() { renderClocks(); setTimeout(tick, 60000 - (Date.now() % 60000) + 50); }, 60000 - (Date.now() % 60000) + 50);
-loadLive();
-loadNews();
+// boot only when new tabs are Tabboard's (in Chrome mode the page is already moving on)
+window.tabboardMode.then((mode) => {
+  if (mode === 'chrome') return;
+  $('#refresh').addEventListener('click', () => loadLive(true));
+  setData(activeAcct() ? readCache(accts.active) : null);
+  document.fonts.ready.then(() => render());
+  // clocks start once everything above is defined, then tick on the minute
+  renderClocks();
+  setTimeout(function tick() { renderClocks(); setTimeout(tick, 60000 - (Date.now() % 60000) + 50); }, 60000 - (Date.now() % 60000) + 50);
+  loadLive();
+  loadNews();
+});

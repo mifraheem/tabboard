@@ -1,3 +1,12 @@
+  // new tab mode: 'tabboard' (default) or 'chrome' (Chrome's own new tab page), shared with the toolbar icon.
+  // The page stays hidden for the moment it takes to read it; app.js waits on it before loading anything.
+  window.tabboardMode = window.chrome?.storage?.local
+    ? (document.documentElement.style.visibility = 'hidden', chrome.storage.local.get('ntmode').then(({ ntmode }) => {
+        if (ntmode === 'chrome') { chrome.tabs.update({ url: 'chrome://new-tab-page/' }); return 'chrome'; }
+        document.documentElement.style.visibility = '';
+        return 'tabboard';
+      }).catch(() => { document.documentElement.style.visibility = ''; return 'tabboard'; }))
+    : Promise.resolve('tabboard');
   // theme: follow the system until the user picks one, then remember it
   const sysLight = matchMedia('(prefers-color-scheme: light)');
   function applyMode() {
