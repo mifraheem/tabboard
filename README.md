@@ -2,7 +2,7 @@
 
 Your GitHub Projects tasks, pull requests, notes and tech news on every new Chrome tab.
 
-![Tabboard in the Brutal look](docs/brutal-light.png)
+![Tabboard in the Brutal look](site/img/brutal-light.png)
 
 It opens instantly from what it loaded last time, then refreshes from GitHub in the background: your boards first, everything else right after.
 
@@ -22,7 +22,7 @@ It opens instantly from what it loaded last time, then refreshes from GitHub in 
 
 | Clay, dark | Soft, light |
 |:---:|:---:|
-| ![Clay look, dark](docs/clay-dark.png) | ![Soft look, light](docs/soft-light.png) |
+| ![Clay look, dark](site/img/clay-dark.png) | ![Soft look, light](site/img/soft-light.png) |
 
 ## Install
 

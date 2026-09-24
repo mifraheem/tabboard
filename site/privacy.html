@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy policy · Tabboard</title>
+<meta name="description" content="What Tabboard stores, what it sends where, and what it never collects.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Space+Grotesk:wght@600;700&family=Inter:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+  <nav aria-label="Main">
+    <a class="logo" href="/"><i aria-hidden="true">T</i>Tabboard</a>
+    <div class="links"><a href="/#features">Features</a><a href="https://github.com/mifraheem/tabboard">GitHub</a></div>
+  </nav>
+
+  <main class="doc">
+    <h1>Privacy policy</h1>
+    <p class="meta">Last updated 24 September 2026</p>
+
+    <p>Tabboard is a Chrome extension that shows your GitHub work on the new tab page. It has no server of its own, and the people who make it can't see your data.</p>
+
+    <h2>What Tabboard collects</h2>
+    <p>Nothing. There are no analytics, no tracking and no ads, and no data is sold or shared.</p>
+
+    <h2>What it stores, and where</h2>
+    <p>Everything is kept in the extension's storage in your own browser, and nowhere else:</p>
+    <ul>
+      <li>Your GitHub sign-in token, so it can load your data</li>
+      <li>A copy of your last loaded boards and pull requests, so new tabs open instantly</li>
+      <li>Your notes, project links, clocks and settings</li>
+    </ul>
+    <p>This storage isn't encrypted. Anyone with access to your computer account could read it, like other browser data. Signing out removes the token.</p>
+
+    <h2>Who it talks to</h2>
+    <table>
+      <tr><th>Service</th><th>Why</th></tr>
+      <tr><td><code>api.github.com</code></td><td>Your boards, issues, pull requests and contribution calendar, using your token</td></tr>
+      <tr><td><code>github.com/login</code></td><td>Signing in with GitHub</td></tr>
+      <tr><td><code>hn.algolia.com</code>, <code>simonwillison.net</code>, <code>huggingface.co</code></td><td>Tech news, only for the sources you turn on. No personal data is sent.</td></tr>
+    </table>
+    <p>Your GitHub data goes directly between your browser and GitHub. GitHub's own <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">privacy statement</a> covers what GitHub does with it.</p>
+
+    <h2>Permissions</h2>
+    <p><strong>Storage</strong> remembers whether new tabs open Tabboard or Chrome's page. <strong>Active tab</strong> lets the toolbar icon switch the tab you're on. Tabboard doesn't read your browsing history or the pages you visit.</p>
+
+    <h2>Removing your data</h2>
+    <p>Sign out from the avatar menu, or remove the extension to delete everything it stored. To revoke GitHub access, go to GitHub → Settings → Applications and revoke Tabboard.</p>
+
+    <h2>Contact</h2>
+    <p>Questions go to <a href="https://github.com/mifraheem/tabboard/issues">GitHub issues</a>. Please report security problems privately, as described in the <a href="https://github.com/mifraheem/tabboard/security/policy">security policy</a>.</p>
+  </main>
+
+  <footer>
+    <a class="logo" href="/"><i aria-hidden="true">T</i>Tabboard</a>
+    <span class="grow"></span>
+    <a href="https://github.com/mifraheem/tabboard">GitHub</a>
+    <span>MIT license</span>
+  </footer>
+</div>
+</body>
+</html>
