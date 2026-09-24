@@ -13,79 +13,136 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Space+Grotesk:wght@600;700&family=Inter:wght@400;600&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Space+Grotesk:wght@600;700&family=Inter:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div class="wrap">
   <nav aria-label="Main">
     <a class="logo" href="/"><i aria-hidden="true">T</i>Tabboard</a>
-    <div class="links"><a href="#features">Features</a><a href="#looks">Looks</a><a href="#privacy">Privacy</a><a href="https://github.com/mifraheem/tabboard">GitHub</a></div>
+    <div class="links"><a href="#features">Features</a><a href="#looks">Looks</a><a href="#setup">Setup</a><a href="#privacy">Privacy</a></div>
+    <a class="btn white" href="https://github.com/mifraheem/tabboard" aria-label="Star Tabboard on GitHub">★ Star<span class="hide-sm">on GitHub</span></a>
   </nav>
 
   <header class="hero">
-    <h1>Your GitHub work, every new tab.</h1>
-    <p class="lead">Tabboard turns Chrome's new tab into your to-do list: tasks from GitHub Projects, pull requests that need you, and a standup you can paste in one click. It opens instantly.</p>
-    <div class="cta">
-      <a class="btn" href="https://github.com/mifraheem/tabboard#install">
-        <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-        Install from GitHub</a>
-      <a class="btn ghost" href="#looks">See the looks</a>
+    <div>
+      <span class="kicker">A new tab for developers</span>
+      <h1>Your GitHub work. <mark>Every new tab.</mark></h1>
+      <p class="lead">Tasks from GitHub Projects, the pull requests that need you, and a standup you can paste in one click. Right where your day starts.</p>
+      <div class="cta">
+        <a class="btn" href="#setup">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          Get Tabboard</a>
+        <a class="btn white" href="#looks">See it in action</a>
+      </div>
+      <p class="note">Free and open source. For Chrome. No account, no server.</p>
     </div>
-    <div class="stickers" aria-label="Highlights">
-      <span style="background: var(--green)">Free</span><span style="background: var(--blue)">Open source</span>
-      <span style="background: var(--lav)">No server</span><span style="background: var(--orange)">Your data stays in your browser</span>
+    <div class="stage">
+      <span class="sticker s1">🔥 14-day streak</span>
+      <span class="sticker s2">Checks failing</span>
+      <span class="sticker s3">Standup copied ✓</span>
+      <div class="browser">
+        <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>New Tab</span></div>
+        <img src="/img/dashboard.webp" alt="Tabboard: To do tasks from three boards, pull requests that need you, notes, world clocks and tech news" width="1440" height="900" fetchpriority="high">
+      </div>
     </div>
-    <div class="shot"><div class="bar" aria-hidden="true"><i></i><i></i><i></i></div>
-      <img src="/img/brutal-light.png" alt="Tabboard showing To do tasks from three boards, pull requests, notes, world clocks and tech news" width="1440" height="900"></div>
   </header>
 </div>
 
+<div class="ticker-band"><div class="ticker" aria-hidden="true"><div>
+  <span>TASKS <b>✦</b> PULL REQUESTS <b>✦</b> STANDUPS <b>✦</b> NOTES <b>✦</b> WORLD CLOCKS <b>✦</b> TECH NEWS <b>✦</b> STREAKS <b>✦</b></span>
+  <span>TASKS <b>✦</b> PULL REQUESTS <b>✦</b> STANDUPS <b>✦</b> NOTES <b>✦</b> WORLD CLOCKS <b>✦</b> TECH NEWS <b>✦</b> STREAKS <b>✦</b></span>
+</div></div></div>
+
 <section id="features"><div class="wrap">
-  <h2>Everything you check before you start.</h2>
-  <p class="sub">Built for developers who live in GitHub Projects and would rather not open five tabs to know what's next.</p>
-  <div class="grid">
-    <div class="card"><h3><b style="--c: var(--yellow)">✓</b>Tasks by status</h3><p>To do, in progress, review, blocked. Across every board and org you pick, with due dates on top.</p></div>
-    <div class="card"><h3><b style="--c: var(--lav)">⇅</b>PRs that need you</h3><p>Review requests, mentions and your own pull requests, with passing or failing checks at a glance.</p></div>
-    <div class="card"><h3><b style="--c: var(--green)">¶</b>One-click standup</h3><p>What you shipped since yesterday, this week or any range. Copies with formatting for Teams, Slack or email.</p></div>
-    <div class="card"><h3><b style="--c: var(--blue)">✎</b>Notes and links</h3><p>Quick to-dos with due dates, plus production and staging links for every project.</p></div>
-    <div class="card"><h3><b style="--c: var(--orange)">◷</b>World clocks</h3><p>Your teammates' timezones with a working-hours dot. Search by city, PKT, EST or UTC+5.</p></div>
-    <div class="card"><h3><b style="--c: var(--coral)">★</b>News and a little fun</h3><p>Tech news for your topics, a contribution streak and a Friday "week in code". Switch it off if you like.</p></div>
+  <div class="head">
+    <span class="kicker">What's on the board</span>
+    <h2>Everything you check before you start. On one screen.</h2>
+    <p>Stop opening five tabs to find out what's next. Tabboard pulls it together the moment you open a new tab.</p>
+  </div>
+  <div class="bento">
+    <article class="tile t-standup" style="--c: var(--pink)">
+      <header><h3>Standup in one click</h3><p>What you closed, what you're on, what's blocked. For yesterday, this week or any range. Pastes into Teams, Slack or email with formatting and links.</p></header>
+      <div class="pic"><img src="/img/standup.webp" alt="The standup panel: stats, done items grouped by project, work in progress and blocked" width="500" height="619" loading="lazy"></div>
+    </article>
+    <article class="tile t-hover" style="--c: var(--blue)">
+      <header><h3>Hover for the details</h3><p>Full title, due date, labels and people, without opening GitHub. Copy it or open it in a keystroke.</p></header>
+      <div class="pic"><img src="/img/hovercard.webp" alt="A task's hover card with due date, assignee, labels and dates" width="400" height="278" loading="lazy"></div>
+    </article>
+    <article class="tile t-week" style="--c: var(--yellow)">
+      <header><h3>Your week in code</h3><p>A Friday recap with a streak built from your GitHub contributions. Made to share.</p></header>
+      <div class="pic"><img src="/img/week.webp" alt="The week in code card: 4 issues closed, 2 PRs merged, 14-day streak" width="360" height="285" loading="lazy"></div>
+    </article>
+    <article class="tile t-prs" style="--c: var(--lav)">
+      <header><h3>Pull requests that need you</h3><p>Review requests, mentions and your own PRs, with passing or failing checks at a glance.</p></header>
+      <div class="pic"><img src="/img/prs.webp" alt="Pull requests with review requested, your PR and checks failing tags" width="1364" height="191" loading="lazy"></div>
+    </article>
+    <article class="tile t-clocks" style="--c: var(--green)">
+      <header><h3>Your team's time zones</h3><p>Know who's awake before you ping them. Search by city, PKT, EST or UTC+5.</p></header>
+      <div class="pic"><img src="/img/clocks.webp" alt="World clocks: local, New York and Berlin with working-hours dots" width="341" height="72" loading="lazy"></div>
+    </article>
+    <article class="tile t-rail" style="--c: var(--orange)">
+      <header><h3>Notes and tech news</h3><p>Private to-dos with due dates, plus the day's news for the topics you pick.</p></header>
+      <div class="pic"><img src="/img/rail.webp" alt="Notes with due dates and a tech news card" width="328" height="705" loading="lazy"></div>
+    </article>
   </div>
 </div></section>
+
+<div class="wrap"><div class="numbers">
+  <div><b>25 ms</b><span>to show your boards on a new tab. Fresh data follows in seconds.</span></div>
+  <div><b>0</b><span>servers. Your browser talks to GitHub directly.</span></div>
+  <div><b>3 × 2</b><span>looks, in light and dark. Brutal, Clay and Soft.</span></div>
+  <div><b>1 click</b><span>from your boards to a formatted standup.</span></div>
+</div></div>
 
 <section id="looks"><div class="wrap">
-  <h2>Three looks. Light and dark.</h2>
-  <p class="sub">Brutal by default. Clay and Soft are one click away in Settings, and every look follows your system's light or dark mode.</p>
-  <div class="looks">
-    <figure><img src="/img/clay-dark.png" alt="Tabboard in the Clay look, dark mode" width="1440" height="900" loading="lazy"><figcaption>Clay, dark</figcaption></figure>
-    <figure><img src="/img/soft-light.png" alt="Tabboard in the Soft look, light mode" width="1440" height="900" loading="lazy"><figcaption>Soft, light</figcaption></figure>
+  <div class="head">
+    <span class="kicker">Make it yours</span>
+    <h2>Three looks. Light and dark.</h2>
+    <p>Brutal by default. Switch any time in Settings. Every look follows your system's light or dark mode.</p>
   </div>
+  <div class="looks-tabs" role="tablist" aria-label="Looks">
+    <button role="tab" aria-selected="true" data-look="brutal" style="--c: var(--yellow)">Brutal</button>
+    <button role="tab" aria-selected="false" data-look="clay" style="--c: var(--lav)">Clay</button>
+    <button role="tab" aria-selected="false" data-look="soft" style="--c: var(--blue)">Soft</button>
+  </div>
+  <div class="looks-frame"><img id="look-img" src="/img/look-brutal-dark.webp" alt="Tabboard in the Brutal look, dark mode" width="1440" height="900" loading="lazy"></div>
+  <p class="looks-note" id="look-note">Brutal, dark: thick outlines, hard shadows, loud color.</p>
 </div></section>
 
-<section id="how"><div class="wrap">
-  <h2>Set up in a minute.</h2>
-  <p class="sub">No account to create, nothing to configure on a server.</p>
+<section id="setup"><div class="wrap">
+  <div class="head">
+    <span class="kicker">Set up in a minute</span>
+    <h2>Three steps. No account.</h2>
+    <p>Tabboard isn't on the Chrome Web Store yet. Until then, it installs from GitHub.</p>
+  </div>
   <div class="steps">
-    <div class="card"><h3>Install</h3><p>Load it from GitHub in Chrome's extensions page. Chrome Web Store coming soon.</p></div>
-    <div class="card"><h3>Sign in with GitHub</h3><p>Enter a short code on github.com and approve. Or paste a personal token.</p></div>
-    <div class="card"><h3>Pick your orgs</h3><p>Choose which organizations to show. Your next new tab is your board.</p></div>
+    <div class="step"><b style="--c: var(--yellow)">1</b><h3>Get the code</h3><p>Clone the repo, or download the ZIP from GitHub and unzip it.</p><code class="cmd">git clone https://github.com/mifraheem/tabboard</code></div>
+    <div class="step"><b style="--c: var(--blue)">2</b><h3>Load it in Chrome</h3><p>Open <code>chrome://extensions</code>, turn on Developer mode, click <strong>Load unpacked</strong> and pick the folder.</p></div>
+    <div class="step"><b style="--c: var(--green)">3</b><h3>Sign in with GitHub</h3><p>Open a new tab, enter the short code on github.com, pick your orgs. Done.</p></div>
   </div>
 </div></section>
 
-<section id="privacy"><div class="wrap privacy">
+<section id="privacy"><div class="wrap private">
   <div>
-    <h2>Private by design.</h2>
-    <p class="sub">Tabboard has no server. It talks to GitHub from your browser, and nothing about you or your work is collected.</p>
-    <a class="btn ghost" href="/privacy">Read the privacy policy</a>
+    <span class="kicker">Private by design</span>
+    <h2>Your work stays yours.</h2>
+    <p class="lead" style="color: var(--soft); font-size: 19px">There's no Tabboard server. Your browser talks to GitHub directly, and nothing about you or your work is collected.</p>
+    <a class="btn white" href="/privacy">Read the privacy policy</a>
   </div>
-  <ul>
-    <li>Your token, notes and settings stay in your browser.</li>
-    <li>It only talks to GitHub, plus the news sources you turn on.</li>
-    <li>No analytics, no tracking, no ads.</li>
-    <li>Open source, so you can check every line.</li>
+  <ul class="checks">
+    <li>Token, notes and settings stay in your browser</li>
+    <li>Talks only to GitHub, plus the news you turn on</li>
+    <li>No analytics, no tracking, no ads</li>
+    <li>Open source under MIT. Read every line.</li>
   </ul>
 </div></section>
+
+<div class="closing"><div class="wrap">
+  <h2>Make your next new tab useful.</h2>
+  <p>Free, open source, and set up in a minute.</p>
+  <a class="btn" href="#setup">Get Tabboard</a>
+</div></div>
 
 <div class="wrap"><footer>
   <a class="logo" href="/"><i aria-hidden="true">T</i>Tabboard</a>
@@ -93,7 +150,20 @@
   <a href="https://github.com/mifraheem/tabboard">GitHub</a>
   <a href="/privacy">Privacy</a>
   <a href="https://github.com/mifraheem/tabboard/issues/new/choose">Report an issue</a>
-  <span>MIT license</span>
+  <small>MIT license</small>
 </footer></div>
+
+<script>
+  // look switcher: swap the screenshot, keep the tabs accessible
+  const LOOKS = { brutal: ['look-brutal-dark', 'Brutal, dark: thick outlines, hard shadows, loud color.'], clay: ['look-clay-dark', 'Clay, dark: soft, puffy surfaces lit from the top left.'], soft: ['look-soft-light', 'Soft, light: quiet and minimal, for calmer days.'] };
+  const img = document.getElementById('look-img'), note = document.getElementById('look-note');
+  document.querySelectorAll('[data-look]').forEach((b) => b.addEventListener('click', () => {
+    const [file, text] = LOOKS[b.dataset.look];
+    img.src = `/img/${file}.webp`; img.alt = `Tabboard in the ${text.split(':')[0]} look`; note.textContent = text;
+    document.querySelectorAll('[data-look]').forEach((x) => x.setAttribute('aria-selected', x === b));
+  }));
+  // preload the other looks after the page settles
+  addEventListener('load', () => Object.values(LOOKS).forEach(([f]) => { new Image().src = `/img/${f}.webp`; }));
+</script>
 </body>
 </html>
