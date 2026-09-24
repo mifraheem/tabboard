@@ -1,0 +1,38 @@
+name: Bug report
+description: Something isn't working
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what you saw instead. Screenshots help (hide private data).
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a new tab
+        2. Click ...
+    validations:
+      required: true
+  - type: input
+    id: chrome
+    attributes:
+      label: Chrome version
+      placeholder: "chrome://version, e.g. 153.0.8010.53"
+    validations:
+      required: true
+  - type: dropdown
+    id: look
+    attributes:
+      label: Look
+      options: [Brutal, Clay, Soft]
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      description: Right-click the page → Inspect → Console. Paste any red lines.
+      render: text

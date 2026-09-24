@@ -2,75 +2,84 @@
 
 Your GitHub Projects tasks, pull requests, notes and tech news on every new Chrome tab.
 
-Tabboard replaces Chrome's new tab page with a dashboard of the work assigned to you across GitHub Projects boards, plus the repos you care about. It opens instantly from a local cache and refreshes in the background.
+![Tabboard in the Brutal look](docs/brutal-light.png)
 
-## What it shows
+It opens instantly from what it loaded last time, then refreshes from GitHub in the background: your boards first, everything else right after.
 
-- **Your tasks by status.** To do, In progress, Review, Blocked, Backlog and Done, grouped by board. Hover a task for its details, copy them with `C`, or open the issue with `O`.
-- **Several organizations at once.** Pick one or more orgs (and your own projects) in Settings.
-- **Repos without a board.** Issues assigned to you that aren't on any board show up in repo cards. Add a repo to see all of its issues, with board statuses where they exist.
-- **Pull requests.** Review requests, mentions and open PRs on your projects, with check status.
-- **Standup.** A ready-to-paste update for any range: since the last workday, this week, this month or custom dates.
-- **Notes.** Private to-dos with due dates, kept in your browser only.
-- **Project links.** Save environment links (production, staging, and so on) per project, with site icons.
-- **World clocks.** Your local time plus teammates' timezones, with working-hours dots. Search zones by city, abbreviation (PKT, EST) or offset (UTC+5).
-- **Tech news and trending.** Hacker News, Simon Willison's blog, trending GitHub repos and Hugging Face models, filtered by the topics you pick.
-- **Three looks.** Brutal (neo-brutalism, the default), Clay (claymorphism) and Soft, each in light and dark.
+## Features
+
+- **Tasks by status** (To do, In progress, Review, Blocked, Backlog, Done), grouped by board. Hover a task for details.
+- **Several orgs at once**, plus your own projects. Picked in Settings.
+- **Repos without a board.** Issues assigned to you that aren't on a board get their own card. Add a repo to see all its issues.
+- **Pull requests** that need you (review requests, mentions, your PRs) with check status.
+- **Standup** for any date range, copied with formatting for Teams, Slack or email.
+- **Notes**: private to-dos with due dates.
+- **Project links**: production, staging and other links per project.
+- **World clocks** for your teammates' timezones. Search by city, `PKT`, `EST` or `UTC+5`.
+- **Tech news and trending** from Hacker News, Simon Willison's blog, GitHub and Hugging Face, filtered by your topics.
+- **Fun extras**: a contribution streak, achievements, a weekly "week in code" card and a few easter eggs. One switch turns them off.
+- **Three looks**: Brutal (default), Clay and Soft, each in light and dark.
+
+| Clay, dark | Soft, light |
+|:---:|:---:|
+| ![Clay look, dark](docs/clay-dark.png) | ![Soft look, light](docs/soft-light.png) |
 
 ## Install
 
-Tabboard isn't on the Chrome Web Store yet. To install it from source:
+Not on the Chrome Web Store yet. From source:
 
-1. Download or clone this repo.
+1. Clone this repo, or download the ZIP and unzip it.
 2. Open `chrome://extensions` and turn on **Developer mode**.
 3. Click **Load unpacked** and pick the repo folder.
 4. Open a new tab and click **Sign in with GitHub**.
 
-Chrome only replaces the new tab page in the profile where the extension is installed.
-
-**Want Chrome's normal new tab sometimes?** Click the ⇄ button in Tabboard's top bar. New tabs then open Chrome's own page until you click Tabboard's toolbar icon or press **Alt+Shift+T** to switch back. The icon shows an "off" badge while Chrome's page is in use. Pin the icon (puzzle-piece menu → pin) for one-click switching.
+To update: `git pull`, then click ↻ on Tabboard in `chrome://extensions`.
 
 ## Signing in
 
-**Sign in with GitHub** uses GitHub's OAuth device flow. You get a short code, enter it on github.com and approve. There's no server involved: the token goes from GitHub straight to your browser.
+**Sign in with GitHub** uses GitHub's device flow: you get a short code, enter it on github.com and approve. There's no server; the token goes straight from GitHub to your browser.
 
-You can also paste a **personal access token** instead (classic, with `repo`, `read:project` and `read:org`). A fine-grained, read-only token works too if your org allows it.
+Prefer a token? Choose **Use a token instead** and paste a classic token with `repo`, `read:project` and `read:org`. You can connect several accounts and switch from the avatar menu.
 
-You can connect several GitHub accounts and switch between them from the avatar menu.
+If your org restricts third-party apps, an org owner approves Tabboard once in the org's **Third-party access** settings.
 
-## Privacy
+## Using it
 
-- Tokens, notes, settings and cached data are stored in the extension's own storage in your browser. They are not encrypted, and nothing is sent anywhere else.
-- Tabboard only talks to `api.github.com`, `github.com/login` (sign-in), and the news sources you enable: `hn.algolia.com`, `simonwillison.net` and `huggingface.co`.
-- To remove Tabboard's access, sign out and revoke it in GitHub → Settings → Applications.
+**Keyboard shortcuts**
 
-## Board setup
-
-Tabboard reads a board's **Status** field for columns and a **Target date** field for due dates. If your boards name these differently, change the names in Settings → Board field names.
-
-## Development
-
-It's plain HTML, CSS and JavaScript with no build step.
-
-| File | What it is |
+| Key | Action |
 |:---|:---|
-| `manifest.json` | Extension manifest (Manifest V3) |
-| `newtab.html` | Page markup and all styles, including the three looks |
-| `app.js` | Everything else: GitHub loading, rendering, settings, sign-in |
-| `theme.js` | Applies light/dark and the look before the page draws, and hands off to Chrome's new tab when that mode is on |
-| `background.js` | The toolbar icon and Alt+Shift+T: switches new tabs between Tabboard and Chrome |
-| `test/index.html` | The same page as a plain file, for trying changes without reloading the extension |
+| `/` | Filter tasks |
+| `1`–`7` | Switch status tab (7 is Notes) |
+| `M` | Mine / Everyone |
+| `N` | New note |
+| `S` | Standup |
+| `C` / `O` | Copy / open the hovered task |
+| `W` | Your week in code |
+| `Alt+Shift+T` | Switch new tabs between Tabboard and Chrome's own page |
 
-To try changes quickly, open `test/index.html` in Chrome and paste a token (sign-in with GitHub only works in the installed extension). After editing `newtab.html`, regenerate the test page:
+**Chrome's normal new tab.** Click **Chrome** in the "New tab page" switch at the top. New tabs open Chrome's page until you click Tabboard's toolbar icon or press `Alt+Shift+T`.
 
-```sh
-sed -e 's#<script src="theme.js"></script>#<script src="../theme.js"></script>#' \
-    -e 's#<script src="app.js"></script>#<script src="../app.js"></script>#' newtab.html > test/index.html
-```
+**Offline.** You keep seeing your last data, with an "Offline" badge showing its time. Tabboard refreshes by itself when you're back.
 
-### Using your own OAuth app
+**Board fields.** Tabboard reads a board's **Status** field for columns and **Target date** for due dates. Different names? Change them in Settings → Boards.
 
-If you fork Tabboard, register your own GitHub OAuth App (Settings → Developer settings → OAuth Apps), tick **Enable Device Flow**, and set `GITHUB_CLIENT_ID` in `app.js` to its Client ID. Don't create a client secret; the device flow doesn't use one.
+## Permissions and privacy
+
+| Permission | Why |
+|:---|:---|
+| `api.github.com` | Load your boards, issues, pull requests and contributions |
+| `github.com/login` | Sign in with GitHub (device flow) |
+| `storage` | Remember whether new tabs open Tabboard or Chrome's page |
+| `activeTab` | Let the toolbar icon switch the tab you're on |
+
+News comes from `hn.algolia.com`, `simonwillison.net` and `huggingface.co`, only for the sources you enable.
+
+Your token, notes, settings and cached data stay in the extension's storage in your browser. They aren't encrypted and aren't sent anywhere else. To remove access completely, sign out and revoke Tabboard in GitHub → Settings → Applications.
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: see [SECURITY.md](SECURITY.md).
 
 ## License
 
