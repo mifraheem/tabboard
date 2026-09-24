@@ -38,13 +38,14 @@ async function gql(token, query, variables) {
   return json.data;
 }
 
-const ITEMS = `query($id:ID!,$c:String,$status:String!,$due:String!){node(id:$id){... on ProjectV2{items(first:100,after:$c){pageInfo{hasNextPage endCursor} nodes{
+const ITEMS = `query($id:ID!,$first:Int,$last:Int,$c:String,$status:String!,$due:String!){node(id:$id){... on ProjectV2{items(first:$first,last:$last,after:$c){totalCount pageInfo{hasNextPage endCursor} nodes{
+  id
   status: fieldValueByName(name:$status){... on ProjectV2ItemFieldSingleSelectValue{name}}
   due: fieldValueByName(name:$due){... on ProjectV2ItemFieldDateValue{date}}
   content{
-    ... on Issue{title number url updatedAt state closedAt bodyText createdAt author{login} comments{totalCount} milestone{title} repository{name} labels(first:4){nodes{name color}} assignees(first:5){nodes{login}}}
-    ... on PullRequest{title number url updatedAt bodyText createdAt author{login} comments{totalCount} milestone{title} repository{name} labels(first:4){nodes{name color}} assignees(first:5){nodes{login}}}
-    ... on DraftIssue{title updatedAt bodyText createdAt assignees(first:5){nodes{login}}}
+    ... on Issue{title number url updatedAt state closedAt createdAt author{login} comments{totalCount} milestone{title} repository{name} labels(first:4){nodes{name color}} assignees(first:5){nodes{login}}}
+    ... on PullRequest{title number url updatedAt createdAt author{login} comments{totalCount} milestone{title} repository{name} labels(first:4){nodes{name color}} assignees(first:5){nodes{login}}}
+    ... on DraftIssue{title updatedAt createdAt assignees(first:5){nodes{login}}}
   }}}}}}`;
 const SEARCH = `query($q:String!){search(query:$q,type:ISSUE,first:100){nodes{
   ... on PullRequest{__typename title number url isDraft updatedAt createdAt mergedAt closedAt repository{name} author{login}
@@ -52,7 +53,7 @@ const SEARCH = `query($q:String!){search(query:$q,type:ISSUE,first:100){nodes{
     commits(last:1){nodes{commit{statusCheckRollup{state}}}}}
   ... on Issue{__typename title number url updatedAt state closedAt bodyText createdAt author{login} comments{totalCount} milestone{title dueOn}
     repository{name owner{login}} labels(first:6){nodes{name color}} assignees(first:5){nodes{login}}}}}}`;
-const PROJECTS = `nodes{id number title url closed}`;
+const PROJECTS = `nodes{id number title url closed items{totalCount}}`;
 
 // per account: which orgs (and/or your own projects) to show, and the board field names
 const SETTINGS_KEY = 'settings.v1';
@@ -66,18 +67,24 @@ const settingsFor = (login) => {
 };
 const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(allSettings)); } catch {} };
 
+// GitHub takes seconds per 100 items and pages can't run in parallel from one end, so read from both ends at once:
+// up to 200 items cost one round trip; bigger boards walk the middle while the last page is already in
 async function loadBoard(token, p, cfg) {
-  const items = [];
-  let c = null;
-  do {
-    const pg = (await gql(token, ITEMS, { id: p.id, c, status: cfg.statusField, due: cfg.dueField })).node.items;
-    items.push(...pg.nodes);
-    c = pg.pageInfo.hasNextPage ? pg.pageInfo.endCursor : null;
-  } while (c);
+  const vars = { id: p.id, status: cfg.statusField, due: cfg.dueField }, n = p.items?.totalCount ?? 0;
+  const page = (v) => gql(token, ITEMS, { ...vars, ...v }).then((d) => d.node.items);
+  const firstP = page({ first: 100 });
+  const lastP = n > 100 ? page({ last: Math.min(100, n - 100) }) : null;
+  const first = await firstP, middle = [];
+  // the saved count may be stale: page the middle by the live total; overlaps are dropped below
+  let c = first.pageInfo.endCursor, left = first.totalCount - 100 - (lastP ? Math.min(100, n - 100) : 0);
+  while (left > 0 && c) { const pg = await page({ first: Math.min(100, left), c }); middle.push(...pg.nodes); left -= pg.nodes.length; c = pg.pageInfo.hasNextPage ? pg.pageInfo.endCursor : null; }
+  const last = lastP ? (await lastP).nodes : [];
+  // items can move between requests: keep each once
+  const seen = new Set(), items = [...first.nodes, ...middle, ...last].filter((t) => !seen.has(t.id) && seen.add(t.id));
   return items.filter((t) => t.content).map((t) => ({
     title: t.content.title, number: t.content.number ?? null, url: t.content.url || p.url, repo: t.content.repository?.name ?? null,
     updatedAt: t.content.updatedAt, labels: t.content.labels?.nodes ?? [], status: t.status?.name || 'No status', due: t.due?.date ?? null,
-    body: (t.content.bodyText || '').replace(/\s+/g, ' ').trim().slice(0, 260), createdAt: t.content.createdAt,
+    createdAt: t.content.createdAt,
     author: t.content.author?.login ?? null, comments: t.content.comments?.totalCount ?? 0, milestone: t.content.milestone?.title ?? null,
     state: t.content.state ?? null, closedAt: t.content.closedAt ?? null, assignees: t.content.assignees.nodes.map((a) => a.login),
   }));
@@ -105,8 +112,11 @@ function issueTask(n) {
     state: n.state, closedAt: n.closedAt, assignees: n.assignees.nodes.map((a) => a.login) };
 }
 
-async function fetchAll(token) {
-  const who = await listOwners(token), me = who.login, cfg = settingsFor(me);
+async function fetchAll(token, onBoards, prev) {
+  // known account with saved orgs: nothing to wait for, so every request starts right away
+  const known = accts.active && settingsFor(accts.active).owners ? accts.active : null;
+  const whoP = listOwners(token);
+  const who = known ? null : await whoP, me = known || who.login, cfg = settingsFor(me);
   if (!cfg.owners) {
     // one org: just use it; none: your own projects; several: ask
     if (who.orgs.length > 1) return { needsSetup: true, who };
@@ -120,17 +130,23 @@ async function fetchAll(token) {
     updatedAt: n.updatedAt, closedAt: n.mergedAt || n.closedAt, draft: n.isDraft || false, review: n.reviewDecision || null,
     checks: n.commits?.nodes[0]?.commit.statusCheckRollup?.state || null, labels: n.labels?.nodes || [],
     reviewers: (n.reviewRequests?.nodes || []).map((r) => r.requestedReviewer?.login).filter(Boolean) });
-  const lists = await Promise.all(cfg.owners.map(async (o) => {
+  const listsP = Promise.all(cfg.owners.map(async (o) => {
     const d = await gql(token, o.type === 'org'
       ? `query($l:String!){owner: organization(login:$l){projectsV2(first:50){${PROJECTS}}}}`
       : `query($l:String!){owner: user(login:$l){projectsV2(first:50){${PROJECTS}}}}`, { l: o.login });
     return (d.owner?.projectsV2.nodes || []).map((p) => ({ ...p, owner: o.login, key: `${o.login}/${p.number}` }));
   }));
-  const projects = lists.flat().filter((p) => !p.closed && !/untitled|template/i.test(p.title));
+  // start the boards from last time's list at once; the fresh list comes in alongside and adds or drops boards
+  const boardJobs = new Map(), startBoard = (p) => { if (!boardJobs.has(p.id)) boardJobs.set(p.id, loadBoard(token, p, cfg)); return boardJobs.get(p.id); };
+  (prev?.projects || []).filter((p) => p.kind !== 'repo' && p.id).forEach(startBoard);
   const bySearch = async (q) => (await gql(token, SEARCH, { q })).search.nodes.filter((n) => n.__typename === 'Issue');
   const now = new Date(), cFrom = new Date(now - 70 * 864e5);
-  const [boards, openPRs, mentions, closed, merged, myOpen, repoLists, contrib] = await Promise.all([
-    Promise.all(projects.map((p) => loadBoard(token, p, cfg))),
+  // boards first: everything else starts at the same moment but never holds the boards back
+  const boardsP = listsP.then((lists) => {
+    const projects = lists.flat().filter((p) => !p.closed && !/untitled|template/i.test(p.title));
+    return Promise.all(projects.map(startBoard)).then((boards) => { projects.forEach((p, i) => { p.tasks = boards[i]; }); return projects; });
+  });
+  const extrasP = Promise.all([
     search(`is:pr is:open updated:>=${since(60)}`),
     search(`is:open mentions:${me} updated:>=${since(30)}`),
     search(`is:issue assignee:${me} closed:>=${since(62)}`),
@@ -143,7 +159,9 @@ async function fetchAll(token) {
       .then((d) => Object.fromEntries(d.viewer.contributionsCollection.contributionCalendar.weeks.flatMap((w) => w.contributionDays).map((x) => [x.date, x.contributionCount])))
       .catch(() => null),
   ]);
-  projects.forEach((p, i) => { p.tasks = boards[i]; });
+  const projects = await boardsP, whoNow = who || await whoP;
+  onBoards?.({ login: me, name: whoNow.name, orgs: whoNow.orgs, owners: cfg.owners, projects });
+  const [openPRs, mentions, closed, merged, myOpen, repoLists, contrib] = await extrasP;
   // issues that live in a repo but on no board become repo cards
   const boardTask = new Map(projects.flatMap((p) => p.tasks.map((t) => [t.url, t])));
   const repoCards = new Map();
@@ -168,12 +186,12 @@ async function fetchAll(token) {
   repoLists.flat().forEach((n) => addIssue(n, true));
   if (cfg.repoIssues) { myOpen.forEach((n) => addIssue(n)); closed.filter((n) => n.__typename === 'Issue' && n.closedAt >= since(14)).forEach((n) => addIssue(n)); }
   for (const c of repoCards.values()) { delete c.seen; c.added = cfg.repos.includes(`${c.owner}/${c.title}`); if (c.tasks.length || c.added) projects.push(c); }
-  return { v: DATA_VERSION, contrib, login: me, name: who.name, orgs: who.orgs, owners: cfg.owners, projects, openPRs: openPRs.map(pr), mentions: mentions.map(pr), recent: [...closed, ...merged].map(pr), at: Date.now() };
+  return { v: DATA_VERSION, contrib, login: me, name: whoNow.name, orgs: whoNow.orgs, owners: cfg.owners, projects, openPRs: openPRs.map(pr), mentions: mentions.map(pr), recent: [...closed, ...merged].map(pr), at: Date.now() };
 }
 
 const cacheKey = (login) => 'cache.' + login;
 // bump when the shape of loaded data changes, so data saved by older code is refetched instead of shown
-const DATA_VERSION = 5;
+const DATA_VERSION = 6;
 const readCache = (login) => { try { const d = JSON.parse(localStorage.getItem(cacheKey(login))); return d?.v === DATA_VERSION ? d : null; } catch { return null; } };
 const writeCache = (d) => { try { localStorage.setItem(cacheKey(d.login), JSON.stringify(d)); } catch {} };
 
@@ -197,7 +215,13 @@ async function loadLive(force) {
   loading = true; loadError = ''; if (!data.at) setData(null);
   $('#refresh').classList.add('spin'); $('#ago').textContent = 'Loading…';
   try {
-    const d = await fetchAll(token);
+    const d = await fetchAll(token, (b) => {
+      if (accts.active !== a.login) return;
+      const prev = data.login === b.login ? data : null;
+      setData({ ...(prev || EMPTY), ...b, v: DATA_VERSION, at: Date.now(), extrasPending: !prev,
+        projects: b.projects.concat(prev ? prev.projects.filter((p) => p.kind === 'repo') : []) });
+      $('#ago').textContent = 'Updating…';
+    }, data.login === a.login ? data : readCache(a.login));
     if (accts.active !== a.login) return; // switched account while loading
     if (d.needsSetup) { openSettings(d.who, true); return; }
     writeCache(d);
@@ -1079,6 +1103,7 @@ function waitingItems() {
 }
 
 function renderWaiting() {
+  if (data.extrasPending) { const el = $('#waiting'); el.className = 'waiting calm'; el.innerHTML = '<span class="sk" style="width:320px;height:14px" aria-hidden="true"></span>'; return; }
   if (firstLoad()) { const el = $('#waiting'); el.className = 'waiting calm'; el.innerHTML = '<span class="sk" style="width:320px;height:14px" aria-hidden="true"></span>'; return; }
   const items = waitingItems(), el = $('#waiting');
   if (!items.length) {
@@ -1267,6 +1292,16 @@ async function copyDetails() {
   setTimeout(() => { if (btn.isConnected) { btn.innerHTML = ICON_COPY; btn.classList.remove('ok'); btn.title = 'Copy details (C)'; } }, 1600);
 }
 
+// issue descriptions aren't part of the board load (they doubled its size); the hover card asks for one
+const bodies = new Map();
+function loadBody(t, row) {
+  if (!t.url || !/\/(issues|pull)\/\d+/.test(t.url)) return;
+  const show = (text) => { if (current === row && text) { const el = card.querySelector('.c-body') || card.querySelector('.c-title').insertAdjacentElement('afterend', document.createElement('p')); el.className = 'c-body'; el.textContent = text; place(row); } };
+  if (bodies.has(t.url)) return show(bodies.get(t.url));
+  gql(tokens[accts.active], 'query($u:URI!){resource(url:$u){... on Issue{bodyText} ... on PullRequest{bodyText}}}', { u: t.url })
+    .then((d) => { const text = (d.resource?.bodyText || '').replace(/\s+/g, ' ').trim().slice(0, 260); bodies.set(t.url, text); show(text); })
+    .catch(() => {});
+}
 function cardHTML(t) {
   const facts = [];
   if (t.state === 'CLOSED' && tabOf(t.status) !== 'done') facts.push(['Heads up', `Closed ${fmtDate(t.closedAt)}, but the board still says ${esc(t.status)}`]);
@@ -1313,6 +1348,7 @@ function show(row, instant) {
     current = row;
     const it = itemOf(row), isNews = 'news' in row.dataset;
     card.innerHTML = isNews ? newsHTML(it) : cardHTML(it);
+    if (!isNews) loadBody(it, row);
     card.style.setProperty('--c', isNews ? SRC_COLOR[it.source] : colorOf(it.status));
     card.classList.toggle('side', isNews);
     card.classList.toggle('quick', card.classList.contains('on'));
