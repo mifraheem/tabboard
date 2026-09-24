@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Tabboard",
+  "version": "3.1",
+  "description": "Your GitHub Projects tasks, PRs and notes on every new tab.",
+  "chrome_url_overrides": { "newtab": "newtab.html" },
+  "host_permissions": ["https://api.github.com/*", "https://github.com/login/*"]
+}
