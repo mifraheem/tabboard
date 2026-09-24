@@ -117,9 +117,9 @@
     </div>
     <div class="product">
       <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>New Tab</span></div>
-      <div class="screen"><img id="look-img" src="/img/look-brutal-dark.webp" alt="Tabboard in the Brutal look, dark mode" width="1440" height="900" loading="lazy"></div>
+      <div class="screen"><img id="look-img" src="/img/dashboard.webp" alt="Tabboard in the Brutal look, light mode" width="1440" height="900" loading="lazy"></div>
     </div>
-    <p class="caption" id="look-note">Brutal, dark mode</p>
+    <p class="caption" id="look-note">Brutal, light mode</p>
   </section>
 
   <section id="setup">
@@ -169,7 +169,7 @@
 
 <script>
   // look switcher: swap the screenshot, keep the tabs accessible
-  const LOOKS = { brutal: ['look-brutal-dark', 'Brutal, dark mode'], clay: ['look-clay-dark', 'Clay, dark mode'], soft: ['look-soft-light', 'Soft, light mode'] };
+  const LOOKS = { brutal: ['dashboard', 'Brutal, light mode'], clay: ['look-clay-dark', 'Clay, dark mode'], soft: ['look-soft-light', 'Soft, light mode'] };
   const img = document.getElementById('look-img'), note = document.getElementById('look-note');
   document.querySelectorAll('[data-look]').forEach((b) => b.addEventListener('click', () => {
     const [file, text] = LOOKS[b.dataset.look];
