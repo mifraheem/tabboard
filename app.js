@@ -2005,11 +2005,10 @@ function quack() {
 }
 $('#duck')?.addEventListener('click', quack);
 
-// switch to Chrome's own new tab page; the toolbar icon or Alt+Shift+T brings Tabboard back
+// New tab page: Tabboard | Chrome. Chrome's page can't show this switch, so the toolbar icon or Alt+Shift+T brings Tabboard back
 if (window.chrome?.tabs && window.chrome?.storage) {
-  const b = $('#to-chrome');
-  b.hidden = false;
-  b.addEventListener('click', () => {
+  $('#ntswitch').hidden = false;
+  $('#ntswitch [data-nt="chrome"]').addEventListener('click', () => {
     toast('Switching to Chrome’s new tab. Click Tabboard’s toolbar icon or press Alt+Shift+T to come back.');
     // this exact tab, not "the active tab"; any refusal is shown instead of failing silently
     chrome.storage.local.set({ ntmode: 'chrome' }).then(() => new Promise((ok) => chrome.tabs.getCurrent(ok))).then((tab) => {
