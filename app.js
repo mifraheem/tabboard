@@ -1890,7 +1890,7 @@ function openFun(kind, anchor) {
     funPop.innerHTML = `<div class="wk"><div class="wk-kicker">Your week in code · since ${w.since.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
       <div class="wk-title">${w.title[0]}</div><div class="wk-sub">${w.title[1]}</div>
       <div class="wk-grid"><div><b>${w.issues}</b><span>issues closed</span></div><div><b>${w.prs}</b><span>PRs merged</span></div>
-        <div><b>${w.streak}</b><span>day streak</span></div><div><b>${w.busiest ? esc(w.busiest[0].slice(0, 3)) : '–'}</b><span>busiest day</span></div></div>
+        <div><b>${w.streak}</b><span>day streak</span></div><div><b class="wk-word">${w.busiest ? esc(w.busiest[0].slice(0, 3)) : '–'}</b><span>busiest day</span></div></div>
       ${w.top ? `<p class="wk-top">Most of it in <b>${esc(w.top[0])}</b> (${w.top[1]})</p>` : ''}
       <button type="button" class="btn primary" data-fun-copy>Copy to share</button></div>`;
   } else {
