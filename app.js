@@ -128,7 +128,8 @@ async function fetchAll(token) {
   }));
   const projects = lists.flat().filter((p) => !p.closed && !/untitled|template/i.test(p.title));
   const bySearch = async (q) => (await gql(token, SEARCH, { q })).search.nodes.filter((n) => n.__typename === 'Issue');
-  const [boards, openPRs, mentions, closed, merged, myOpen, repoLists] = await Promise.all([
+  const now = new Date(), cFrom = new Date(now - 70 * 864e5);
+  const [boards, openPRs, mentions, closed, merged, myOpen, repoLists, contrib] = await Promise.all([
     Promise.all(projects.map((p) => loadBoard(token, p, cfg))),
     search(`is:pr is:open updated:>=${since(60)}`),
     search(`is:open mentions:${me} updated:>=${since(30)}`),
@@ -137,6 +138,10 @@ async function fetchAll(token) {
     cfg.repoIssues ? search(`is:issue is:open assignee:${me}`) : [],
     // ponytail: first 100 open + recently closed issues per added repo; paginate if a repo outgrows that
     Promise.all(cfg.repos.map(async (r) => [...await bySearch(`repo:${r} is:issue is:open`), ...await bySearch(`repo:${r} is:issue is:closed closed:>=${since(14)}`)])),
+    // the same green squares as the GitHub profile: commits, PRs, reviews and issues, private repos included
+    gql(token, 'query($from:DateTime!,$to:DateTime!){viewer{contributionsCollection(from:$from,to:$to){contributionCalendar{weeks{contributionDays{date contributionCount}}}}}}', { from: cFrom.toISOString(), to: now.toISOString() })
+      .then((d) => Object.fromEntries(d.viewer.contributionsCollection.contributionCalendar.weeks.flatMap((w) => w.contributionDays).map((x) => [x.date, x.contributionCount])))
+      .catch(() => null),
   ]);
   projects.forEach((p, i) => { p.tasks = boards[i]; });
   // issues that live in a repo but on no board become repo cards
@@ -163,12 +168,12 @@ async function fetchAll(token) {
   repoLists.flat().forEach((n) => addIssue(n, true));
   if (cfg.repoIssues) { myOpen.forEach((n) => addIssue(n)); closed.filter((n) => n.__typename === 'Issue' && n.closedAt >= since(14)).forEach((n) => addIssue(n)); }
   for (const c of repoCards.values()) { delete c.seen; c.added = cfg.repos.includes(`${c.owner}/${c.title}`); if (c.tasks.length || c.added) projects.push(c); }
-  return { v: DATA_VERSION, login: me, name: who.name, orgs: who.orgs, owners: cfg.owners, projects, openPRs: openPRs.map(pr), mentions: mentions.map(pr), recent: [...closed, ...merged].map(pr), at: Date.now() };
+  return { v: DATA_VERSION, contrib, login: me, name: who.name, orgs: who.orgs, owners: cfg.owners, projects, openPRs: openPRs.map(pr), mentions: mentions.map(pr), recent: [...closed, ...merged].map(pr), at: Date.now() };
 }
 
 const cacheKey = (login) => 'cache.' + login;
 // bump when the shape of loaded data changes, so data saved by older code is refetched instead of shown
-const DATA_VERSION = 4;
+const DATA_VERSION = 5;
 const readCache = (login) => { try { const d = JSON.parse(localStorage.getItem(cacheKey(login))); return d?.v === DATA_VERSION ? d : null; } catch { return null; } };
 const writeCache = (d) => { try { localStorage.setItem(cacheKey(d.login), JSON.stringify(d)); } catch {} };
 
@@ -1750,8 +1755,12 @@ const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').match
 const dayKey = (d) => isoDate(new Date(d));
 
 // 1. streak: consecutive workdays with something closed or merged; today counts once it happens, weekends never break it
+function activeDays() {
+  if (data.contrib) return new Set(Object.entries(data.contrib).filter(([, n]) => n > 0).map(([d]) => d));
+  return new Set((data.recent || []).filter((r) => r.closedAt).map((r) => dayKey(r.closedAt)));
+}
 function shipStreak() {
-  const days = new Set((data.recent || []).filter((r) => r.closedAt).map((r) => dayKey(r.closedAt)));
+  const days = activeDays();
   const d = startOfDay(new Date());
   if (!days.has(isoDate(d))) d.setDate(d.getDate() - 1);
   let n = 0;
@@ -1782,7 +1791,7 @@ const showWeekChip = () => { const d = new Date(); return d.getDay() === 0 || d.
 
 // 6. achievements: checked against current data; once earned they stay
 const BADGES = [
-  ['streak5', '🔥', 'On a roll', 'A 5-workday shipping streak', () => shipStreak() >= 5],
+  ['streak5', '🔥', 'On a roll', 'A 5-workday contribution streak', () => shipStreak() >= 5],
   ['night', '🦉', 'Night Owl', 'Closed or merged something between midnight and 4 AM', () => (data.recent || []).some((r) => r.closedAt && new Date(r.closedAt).getHours() < 4)],
   ['early', '🐦', 'Early Bird', 'Shipped something before 8 AM', () => (data.recent || []).some((r) => { const h = r.closedAt && new Date(r.closedAt).getHours(); return h >= 4 && h < 8; })],
   ['bugs', '🪲', 'Bug Squasher', 'Closed 10 issues labeled bug', () => (data.recent || []).filter((r) => r.kind !== 'PullRequest' && (r.labels || []).some((l) => /bug/i.test(l.name))).length >= 10],
@@ -1869,8 +1878,8 @@ function quip() {
 function funChips() {
   if (!funOn() || !data.at) return '';
   const s = shipStreak(), earned = BADGES.filter(([id]) => fun.badges[id]).length;
-  const today = (data.recent || []).some((r) => r.closedAt && dayKey(r.closedAt) === isoDate(new Date()));
-  const tip = `Workdays in a row you closed or merged something. Weekends don't break it.${today ? '' : ' Close something today to keep it going.'}`;
+  const today = activeDays().has(isoDate(new Date()));
+  const tip = `Workdays in a row with GitHub contributions (commits, PRs, reviews, issues). Weekends don't break it.${today ? '' : ' Contribute today to keep it going.'}`;
   return `<span class="fun-chips">${s >= 1 ? `<button type="button" class="fun-chip" data-fun="streak" title="${tip}">🔥 ${s}-day streak</button>` : ''}
     <button type="button" class="fun-chip" data-fun="badges" title="Achievements">🏅 ${earned}</button>
     ${showWeekChip() ? '<button type="button" class="fun-chip" data-fun="week" title="Your week in code (W)">🎁 Your week</button>' : ''}</span>`;
