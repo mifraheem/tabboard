@@ -1,5 +1,7 @@
 # Tabboard
 
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/npmbmldcbkhdgmeockopcjinkbaocphn?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/tabboard/npmbmldcbkhdgmeockopcjinkbaocphn) [![Users](https://img.shields.io/chrome-web-store/users/npmbmldcbkhdgmeockopcjinkbaocphn)](https://chromewebstore.google.com/detail/tabboard/npmbmldcbkhdgmeockopcjinkbaocphn)
+
 Your GitHub Projects tasks, pull requests, notes and tech news on every new Chrome tab.
 
 ![Tabboard in the Brutal look](site/img/brutal-light.png)
