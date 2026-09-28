@@ -26,7 +26,9 @@ It opens instantly from what it loaded last time, then refreshes from GitHub in 
 
 ## Install
 
-Not on the Chrome Web Store yet. From source:
+**[Add Tabboard from the Chrome Web Store](https://chromewebstore.google.com/detail/tabboard/npmbmldcbkhdgmeockopcjinkbaocphn)**, then open a new tab and click **Sign in with GitHub**. Updates install automatically.
+
+From source:
 
 1. Clone this repo, or download the ZIP and unzip it.
 2. Open `chrome://extensions` and turn on **Developer mode**.

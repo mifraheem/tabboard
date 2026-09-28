@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Now on the [Chrome Web Store](https://chromewebstore.google.com/detail/tabboard/npmbmldcbkhdgmeockopcjinkbaocphn); site and README point there
+
 ## 3.2 (2026-09-24)
 
 First public release.
